@@ -5,10 +5,34 @@
   "repo": "ShiroDoromoto/amenbo-plugin-slack",
   "os": ["macos", "windows", "linux"],
   "category": "notification",
-  "url": "https://github.com/ShiroDoromoto/amenbo-plugin-slack/releases/download/v1/slack-v1.tar.gz",
-  "checksum": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+  "assets": {
+    "macos-arm64": {
+      "url": "https://github.com/ShiroDoromoto/amenbo-plugin-slack/releases/download/v1/slack-v1-macos-arm64.tar.gz",
+      "checksum": "sha256:34e200519cb8af68bb8542156a1ec07cca0eb8865a64b7a1dc811a681e10028f"
+    },
+    "macos-x64": {
+      "url": "https://github.com/ShiroDoromoto/amenbo-plugin-slack/releases/download/v1/slack-v1-macos-x64.tar.gz",
+      "checksum": "sha256:60bbe7e02ddf429baa483f36c74d4c01ff0f7fd0a4fa0fd71951852224d51c34"
+    },
+    "linux-x64": {
+      "url": "https://github.com/ShiroDoromoto/amenbo-plugin-slack/releases/download/v1/slack-v1-linux-x64.tar.gz",
+      "checksum": "sha256:16cae669dacccbcde569f0333a3cf5b15b0b9de59e607509ba7fa63047c13531"
+    },
+    "linux-arm64": {
+      "url": "https://github.com/ShiroDoromoto/amenbo-plugin-slack/releases/download/v1/slack-v1-linux-arm64.tar.gz",
+      "checksum": "sha256:cbc8de6ff631864667d8e9b332ff60160d0304e53e03573969506b45f625e664"
+    },
+    "windows-x64": {
+      "url": "https://github.com/ShiroDoromoto/amenbo-plugin-slack/releases/download/v1/slack-v1-windows-x64.tar.gz",
+      "checksum": "sha256:f0d034127a1c0acc0eec1fcf8a0be791e61f893daff52ffde739b049d8e17125"
+    },
+    "windows-arm64": {
+      "url": "https://github.com/ShiroDoromoto/amenbo-plugin-slack/releases/download/v1/slack-v1-windows-arm64.tar.gz",
+      "checksum": "sha256:e3eafb8f72250e48782d4e0f3a0abedfa2572a9cee1684364d076dfb2eb728ae"
+    }
+  },
   "payload_v": 1,
-  "min_amenbo": "2.0.0",
+  "min_amenbo": "3.1.0",
   "config": [
     { "key": "webhook_url", "label": "Slack webhook URL", "secret": true, "required": true },
     {
