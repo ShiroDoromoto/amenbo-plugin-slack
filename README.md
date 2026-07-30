@@ -123,6 +123,22 @@ Its `url` and `checksum` name a release that is not cut yet, and nothing about a
 is verified anyway — the real install route resolves the catalog entry and checks the asset's
 provenance before anything lands on disk.
 
+### Releases
+
+The distributables are baked in CI, not on a machine: pushing a `v*` tag runs
+[`release.yml`](.github/workflows/release.yml), which bakes every asset key the catalog entry
+publishes, uploads them, and prints their digests in the run summary for the entry to quote.
+`make dist` is the same build, to check one before tagging it.
+
+```sh
+make dist      # → dist/slack-v1-*.tar.gz + sha256 digests
+```
+
+Everything cross-compiles from one runner — the plugin is pure Go over HTTP, so no asset needs a
+C toolchain or a Mac. **A release is not a distribution:** nothing installs from those bytes
+until the catalog entry points at them, and the signature that blesses an asset is the
+catalog's, made on merge.
+
 ## License
 
 Apache-2.0. See [LICENSE](LICENSE).

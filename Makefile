@@ -1,6 +1,13 @@
 BIN := slack
+VERSION := v1
+# One asset per platform key the catalog entry publishes. This list is what a release bakes:
+# the release workflow runs `dist` rather than enumerating platforms of its own, so the keys
+# published and the keys checked here cannot drift apart, and a platform is added in one place.
+# Nothing here needs a C toolchain or a Mac — the plugin is pure Go over HTTP, so every asset
+# cross-compiles from one runner.
+PLATFORMS := macos-arm64 macos-x64 linux-x64 linux-arm64 windows-x64 windows-arm64
 
-.PHONY: build test install clean
+.PHONY: build test install dist clean
 
 build:
 	go build -o $(BIN) .
@@ -28,6 +35,33 @@ endif
 	@echo "installed into $(AMENBO_BASE)/plugins/$(BIN) — give it a webhook and enable it:"
 	@echo "  amenbo plugin config set $(BIN) webhook_url <url>"
 	@echo "  amenbo plugin enable $(BIN)"
+#
+# The release build: every asset the catalog entry points at, plus the digests it quotes. The
+# release workflow runs this, so what CI publishes is what this prints; run it by hand to check
+# a release before tagging one.
+#
+# **The entry inside each tarball is the plugin's name**, flat — `<name>.exe` on Windows: that
+# is the file an install lays down, and it is looked for by name.
+dist: test
+	rm -rf dist && mkdir -p dist/stage
+	@set -e; for p in $(PLATFORMS); do \
+		case $$p in \
+			macos-arm64) os=darwin; arch=arm64;; \
+			macos-x64) os=darwin; arch=amd64;; \
+			linux-x64) os=linux; arch=amd64;; \
+			linux-arm64) os=linux; arch=arm64;; \
+			windows-x64) os=windows; arch=amd64;; \
+			windows-arm64) os=windows; arch=arm64;; \
+			*) echo "no GOOS/GOARCH for platform key $$p"; exit 1;; \
+		esac; \
+		entry=$(BIN); \
+		if [ "$$os" = windows ]; then entry=$(BIN).exe; fi; \
+		mkdir -p dist/stage/$$p; \
+		CGO_ENABLED=0 GOOS=$$os GOARCH=$$arch go build -trimpath -ldflags "-s -w" -o dist/stage/$$p/$$entry .; \
+		chmod +x dist/stage/$$p/$$entry; \
+		tar -czf dist/$(BIN)-$(VERSION)-$$p.tar.gz -C dist/stage/$$p $$entry; \
+	done
+	@echo; echo "assets for the catalog entry (checksum: sha256:<digest>):"; cd dist && shasum -a 256 *.tar.gz
 
 clean:
 	rm -f $(BIN)
