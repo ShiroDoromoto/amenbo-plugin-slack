@@ -148,9 +148,31 @@ func TestHookNamesTheTaskARemovedCommentHungOn(t *testing.T) {
 	}
 }
 
-// A comment added names itself: nothing on the wire says which task it hangs on, so the message says
-// what is known rather than guessing.
-func TestHookNamesAnAddedCommentByItsNumber(t *testing.T) {
+// A comment added names its task too, and by the same road: the parent is on the wire for both
+// comment events, and a comment's own number is not what a reader in a channel can follow.
+func TestHookNamesTheTaskAnAddedCommentHangsOn(t *testing.T) {
+	posted := slackStands(t)
+	asked := readsBack(t, "AMB-T-7", "Ship the thing")
+
+	parent := int64(7)
+	in := reporting(eventCommentAdded, eventCommentAdded)
+	in.Parent = &parent
+	if err := hook(in); err != nil {
+		t.Fatal(err)
+	}
+
+	if len(*posted) != 1 || (*posted)[0] != "AI added a comment on AMB-T-7 — Ship the thing" {
+		t.Fatalf("unexpected message: %v", *posted)
+	}
+	if len(*asked) != 1 || !strings.HasPrefix((*asked)[0], "task show 7 ") {
+		t.Errorf("the parent is what gets read: %v", *asked)
+	}
+}
+
+// An amenbo from before the parent was on the wire sends the event without one. The field was
+// added rather than changed, so nothing is refused: the message names the comment by its own
+// number, which is all that arrived.
+func TestHookFallsBackToTheNumberWhenNoParentArrives(t *testing.T) {
 	posted := slackStands(t)
 	asked := readsBack(t, "AMB-T-42", "Ship the thing")
 

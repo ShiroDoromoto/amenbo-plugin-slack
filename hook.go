@@ -193,10 +193,9 @@ type subject struct {
 //   - a live task or decision is read back by its id — the ordinary case
 //   - a **deleted** task is gone, so its title comes off the vanished record the payload carries
 //     in its place
-//   - a comment **added** is named by its own number: nothing on the wire says which task it
-//     hangs on, and there is nothing to ask for one with
-//   - a comment **taken back** does name its task — the payload carries it as the parent — so
-//     that one is read back after all
+//   - a comment, added or taken back, is named by the task it hangs on — the payload carries
+//     that as the parent — rather than by its own number, which is a handle inside the store's
+//     timeline and points at nothing a reader in a channel can follow
 func describe(in input) (subject, error) {
 	switch in.Event {
 	case eventTaskDeleted:
@@ -205,18 +204,28 @@ func describe(in input) (subject, error) {
 		ref, title, err := decisionShow(in.ID)
 		return named(fmt.Sprintf("decision #%d", in.ID), ref, title), err
 	case eventCommentAdded:
-		return subject{name: fmt.Sprintf("comment #%d", in.ID)}, nil
+		return commentOn(in, fmt.Sprintf("comment #%d", in.ID))
 	case eventCommentRemoved:
-		if in.Parent == nil {
-			return subject{name: fmt.Sprintf("a comment (#%d)", in.ID)}, nil
-		}
-		ref, title, err := taskShow(*in.Parent)
-		on := named(fmt.Sprintf("task #%d", *in.Parent), ref, title)
-		return subject{name: "a comment on " + on.name, title: on.title}, err
+		return commentOn(in, fmt.Sprintf("a comment (#%d)", in.ID))
 	default:
 		ref, title, err := taskShow(in.ID)
 		return named(fmt.Sprintf("task #%d", in.ID), ref, title), err
 	}
+}
+
+// commentOn names a comment by the task it hangs on, which is the only end of it a reader can
+// pick up: the comment's own number belongs to a timeline they are not looking at.
+//
+// The parent is a field that was added to the payload rather than one whose meaning changed, so
+// an amenbo old enough to send none is not a version to refuse over — it is a payload with less
+// in it, and the message falls back to naming the comment by its number, which is all there is.
+func commentOn(in input, fallback string) (subject, error) {
+	if in.Parent == nil {
+		return subject{name: fallback}, nil
+	}
+	ref, title, err := taskShow(*in.Parent)
+	on := named(fmt.Sprintf("task #%d", *in.Parent), ref, title)
+	return subject{name: "a comment on " + on.name, title: on.title}, err
 }
 
 // named is how a record read back is pointed at: its ref and title where the read answered, and

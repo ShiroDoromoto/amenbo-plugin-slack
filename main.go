@@ -86,8 +86,9 @@ type input struct {
 	// left to read back, so the row travels on the wire in its place. Its keys are the
 	// record's own columns.
 	Record map[string]any `json:"record"`
-	// Parent is what a vanished child hung on, by number — a removed comment's task. Nil on
-	// every event that has no parent, and on an older store's deletion that carried none.
+	// Parent is what a child record hangs on, by number — the task of a comment, added or
+	// taken back. Nil on every event that has no parent, and on an older amenbo that carried
+	// none for one that does.
 	Parent *int64 `json:"parent"`
 	// Config holds the plugin's own non-secret settings, as the user filled them in. Secrets
 	// never appear here: amenbo puts those in the environment instead.

@@ -45,14 +45,14 @@ Every event amenbo fires is on offer, and each one has its own sentence — one 
 | `task.deleted` | `AI deleted <task>` |
 | `decision.accepted` | `AI accepted <decision>` |
 | `decision.rejected` | `AI rejected <decision>` |
-| `comment.added` | `AI added comment #<n>` |
+| `comment.added` | `AI added a comment on <task>` |
 | `comment.removed` | `AI took back a comment on <task>` |
 
-`<task>` and `<decision>` are the record's ref and its title, read back from the store. Two of them
+`<task>` and `<decision>` are the record's ref and its title, read back from the store. One of them
 cannot be: a **deleted** task is gone, so its title comes off the vanished record the event carries
-in its place, and a comment **added** names only itself — nothing on the wire says which task it
-hangs on, and there is nothing to ask for one with. A comment **taken back** does name its task, so
-that one is read back after all.
+in its place. A comment is read back by the task it hangs on rather than by itself — its own number
+belongs to a timeline nobody in the channel is looking at — and an amenbo old enough not to send
+that task falls back to naming the comment by its number.
 
 ### A burst arrives as one message
 
