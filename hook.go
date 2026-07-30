@@ -51,9 +51,10 @@ const eventsSetting = "events"
 
 // hook is the observation face: amenbo fired an event, and this is the message it becomes.
 //
-// Three filters stand in front of the send, and each one is a silence rather than a failure — a
-// document from a contract this plugin cannot read, a write the user drove themselves, and an
-// event they did not ask to hear about are all runs with nothing to say, not runs that went wrong.
+// Four filters stand in front of the send, and each one is a silence rather than a failure — a
+// document from a contract this plugin cannot read, a write the user drove themselves, an event they
+// did not ask to hear about, and an event that was already sent are all runs with nothing to say,
+// not runs that went wrong.
 //
 // What can go wrong is the send, and the read behind it. The two are not the same failure: a
 // webhook that will not take the message means nothing was reported, while a record that could
@@ -70,6 +71,13 @@ func hook(in input) error {
 	if !selected(in)[in.Event] {
 		return nil
 	}
+	// Before anything is read or sent: an event delivered twice is one message, and the second
+	// delivery is amenbo's bookkeeping rather than news (see sent.go).
+	sent := recall()
+	key := sentKey(in)
+	if sent.holds(key) {
+		return nil
+	}
 
 	webhook := os.Getenv(webhookEnv)
 	if webhook == "" {
@@ -81,6 +89,11 @@ func hook(in input) error {
 	about, readErr := about(in)
 	if err := post(webhook, sentence(in.Event, in.New, about)); err != nil {
 		return err
+	}
+	// Recorded only once the message is out: a send that failed was not a delivery, so a replay of
+	// it should carry the message rather than skip it.
+	if err := sent.add(key); err != nil {
+		return fmt.Errorf("the message went out, but this run may repeat it: %w", err)
 	}
 	if readErr != nil {
 		return fmt.Errorf("the message went out without what it could not read: %w", readErr)

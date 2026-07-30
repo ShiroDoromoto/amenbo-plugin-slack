@@ -120,9 +120,18 @@ that could not be read back costs the message its title and nothing else. So a m
 lost its title still goes out, naming the task by its number, and the run still ends non-zero
 so the fault lands in the log instead of quietly shortening every message from then on.
 
-**Nothing is sent twice on purpose, and nothing is retried.** amenbo drops a failed event and
-never retries it; two sides retrying one send is how one message becomes three, with nobody
-able to say why. See [`hook.go`](hook.go) and [`slack.go`](slack.go).
+**One event is one message, even when it arrives twice.** A runner that died after this plugin
+finished an event, but before amenbo could take that row off the queue, delivers it again — and
+nobody reading the channel could tell that second message from a real one. So what has been sent
+is written down, keyed by what happened, to which record, at which moment, and a key already
+there stops the send. The record is a bounded tail in the plugin's own installed directory, which
+`plugin uninstall` takes away with everything else. **What is not stopped is you doing the same
+thing twice**: two writes are two moments, and both are reported. See [`sent.go`](sent.go).
+
+**Nothing is retried.** amenbo drops a failed event and never retries it; two sides retrying one
+send is how one message becomes three, with nobody able to say why. A send that failed is not
+written down either, so a delivery amenbo does repeat carries the message that never arrived. See
+[`hook.go`](hook.go) and [`slack.go`](slack.go).
 
 ## Build
 

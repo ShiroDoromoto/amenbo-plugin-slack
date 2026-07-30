@@ -37,6 +37,14 @@ const contractVersion = 1
 // actorAI is the one actor whose writes are reported. The other is the user themselves.
 const actorAI = "ai"
 
+// pluginName is what amenbo knows this plugin as: its manifest's name, its installed directory, and
+// the word a user types after `plugin`. One spelling, so what is written under it is found again.
+const pluginName = "slack"
+
+// storeEnv names the store amenbo is working — the base directory it handed over on launch, which is
+// also where this plugin's own installed directory sits.
+const storeEnv = "AMENBO_HOME"
+
 // webhookEnv carries the `webhook_url` setting. It is declared secret, so amenbo puts it in
 // the environment rather than in the `config` object on stdin, under the name its key
 // mechanically becomes.
@@ -68,6 +76,9 @@ type input struct {
 	ID int64 `json:"id"`
 	// Actor is who drove the write: "human" or "ai".
 	Actor string `json:"actor"`
+	// At is when the event fired, as "2026-07-22T09:00:00Z". Redelivery of one event carries the
+	// same moment, which is what tells a replay from the user acting twice.
+	At string `json:"at"`
 	// New is the record's state after the change, for the events whose name does not
 	// already say it.
 	New string `json:"new"`
