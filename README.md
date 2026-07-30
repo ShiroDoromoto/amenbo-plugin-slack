@@ -23,11 +23,44 @@ Three things decide what arrives.
 
 ```sh
 amenbo plugin install slack
-amenbo plugin config set slack webhook_url https://hooks.slack.com/services/…
+printf %s 'https://hooks.slack.com/services/…' | amenbo plugin config set slack webhook_url -
 amenbo plugin enable slack            # installing never runs anything; this is the consent
 ```
 
-Run these from the folder amenbo is bound to: the setting and the switch are that project's.
+Run these from the folder amenbo is bound to: the setting and the switch are that project's. The
+webhook goes in through `-`, which reads it from stdin — written as an argument it would sit in the
+shell's history and in anything reading the process list, and a webhook is a credential.
+
+### Getting the webhook URL
+
+The webhook is Slack's, not amenbo's: it is made in the workspace, points at one channel, and is the
+whole of what this plugin is ever told about where to post. From
+[Your Apps](https://api.slack.com/apps), create an app in the workspace that should hear about the
+project, turn on **Incoming Webhooks**, add one to the channel it should post to, and copy the URL it
+hands back — that URL *is* the channel, so a webhook for the wrong channel is a plugin reporting to
+the wrong room with nothing else set wrong. Slack's own walkthrough is [Sending messages using
+incoming webhooks](https://api.slack.com/messaging/webhooks).
+
+Anyone holding the URL can post to that channel, which is why it is declared secret here: it leaves
+amenbo only into this plugin's environment, and never into an export, a log or a read-back.
+
+### One channel per project
+
+A setting belongs to the project it was written in and there is no tier under it, so which channel a
+project reports to is answered in that project and nowhere else. Pointing a second project at a
+second channel is two commands run where that project is bound; the install is the machine's and is
+already behind you:
+
+```sh
+cd ~/work/other-project
+printf %s 'https://hooks.slack.com/services/…' | amenbo plugin config set slack webhook_url -
+amenbo plugin enable slack
+```
+
+Nothing carries over between them, and that is the point twice: a project you have not answered for
+holds no webhook, so `enable` there is refused rather than quietly borrowing another project's
+channel — and the gate is per project too, so switching the plugin off in one leaves the others
+reporting.
 
 ### What can be reported
 
