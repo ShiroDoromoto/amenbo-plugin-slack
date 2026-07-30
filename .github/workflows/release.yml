@@ -27,9 +27,11 @@ jobs:
         with:
           go-version-file: go.mod
 
-      # `dist` runs the gate first, so a tag cannot publish what does not pass it.
+      # `dist` runs the gate first, so a tag cannot publish what does not pass it. The tag is handed
+      # over rather than looked up: the assets are named after the release they belong to, and the
+      # ref this run was started with is the one thing that says which release that is.
       - name: Bake every asset
-        run: make dist
+        run: make dist VERSION="$GITHUB_REF_NAME"
 
       - name: Publish the digests
         run: |

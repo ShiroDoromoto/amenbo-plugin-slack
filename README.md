@@ -189,8 +189,11 @@ publishes, uploads them, and prints their digests in the run summary for the ent
 `make dist` is the same build, to check one before tagging it.
 
 ```sh
-make dist      # → dist/slack-v1-*.tar.gz + sha256 digests
+make dist      # → dist/slack-<version>-*.tar.gz + sha256 digests
 ```
+
+The version in those names is the tag being released, so nothing has to be bumped by hand for a
+release to be named after itself; run off a commit no tag stands on, the build calls itself `dev`.
 
 Everything cross-compiles from one runner — the plugin is pure Go over HTTP, so no asset needs a
 C toolchain or a Mac. **A release is not a distribution:** nothing installs from those bytes
