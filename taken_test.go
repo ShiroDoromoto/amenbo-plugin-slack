@@ -74,7 +74,7 @@ func TestTheRecordLivesWithTheInstalledPlugin(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	path := filepath.Join(home, "plugins", pluginName, sentFile)
+	path := filepath.Join(home, "plugins", pluginName, takenFile)
 	raw, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("nothing was written down at %s: %v", path, err)
@@ -97,7 +97,7 @@ func TestTheRecordKeepsOnlyItsTail(t *testing.T) {
 		}
 	}
 
-	raw, err := os.ReadFile(filepath.Join(home, "plugins", pluginName, sentFile))
+	raw, err := os.ReadFile(filepath.Join(home, "plugins", pluginName, takenFile))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -126,8 +126,9 @@ func TestHookReportsWithNoStoreToRememberIn(t *testing.T) {
 	}
 }
 
-// A record that cannot be written is a message that went out and may be sent again — which is worth
-// a failed run, since that is where the reason becomes visible.
+// A store that cannot be written down to is a message that may be sent again, and one that was never
+// held back — which is worth a failed run, since that is where the reason becomes visible. What it is
+// not worth is a silence.
 func TestHookFailsWhenItCannotWriteDownWhatItSent(t *testing.T) {
 	// A store whose path is a file has no `plugins/` under it to make.
 	blocked := filepath.Join(t.TempDir(), "not-a-directory")
@@ -135,15 +136,16 @@ func TestHookFailsWhenItCannotWriteDownWhatItSent(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Setenv(storeEnv, blocked)
+	t.Setenv(queueRemainingEnv, "5")
 	posted := slackStands(t)
 	readsBack(t, "AMB-T-42", "Ship the thing")
 
 	err := hook(moment(eventTaskDone, "2026-07-22T09:00:00Z"))
 
 	if len(*posted) != 1 {
-		t.Fatalf("the message should still go out, got %v", *posted)
+		t.Fatalf("the message should go out even with a queue behind it, got %v", *posted)
 	}
-	if err == nil || !strings.Contains(err.Error(), "repeat") {
-		t.Errorf("the run should say the message may be repeated, got %v", err)
+	if err == nil {
+		t.Error("the run should end on the store it could not write")
 	}
 }

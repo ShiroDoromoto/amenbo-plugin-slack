@@ -31,8 +31,8 @@ Run these from the folder amenbo is bound to: the setting and the switch are tha
 
 ### What can be reported
 
-Every event amenbo fires is on offer, and each one has its own sentence. One event is one message.
-The four in **bold** are what a channel gets until you say otherwise.
+Every event amenbo fires is on offer, and each one has its own sentence — one line. The four in
+**bold** are what a channel gets until you say otherwise.
 
 | Event | The message |
 |---|---|
@@ -53,6 +53,22 @@ cannot be: a **deleted** task is gone, so its title comes off the vanished recor
 in its place, and a comment **added** names only itself — nothing on the wire says which task it
 hangs on, and there is nothing to ask for one with. A comment **taken back** does name its task, so
 that one is read back after all.
+
+### A burst arrives as one message
+
+Deleting a project, or clearing a pile of tasks, fires tens of events in a moment — and to you that
+was one act. So a line waits while amenbo says anything is still queued for this plugin, and the run
+that sees nothing behind it sends everything waiting as one message:
+
+```
+AI created AMB-T-42 — Ship the thing
+AI moved AMB-T-42 to in_progress — Ship the thing
+AI finished AMB-T-42 — Ship the thing
+```
+
+A quiet channel is unaffected: one event with nothing behind it is one message, as before. And a
+batch is never a message held indefinitely — amenbo delivers as fast as it can, so what is waiting is
+waiting on the events already queued in front of it, nothing else.
 
 ### Settings
 
@@ -120,17 +136,25 @@ that could not be read back costs the message its title and nothing else. So a m
 lost its title still goes out, naming the task by its number, and the run still ends non-zero
 so the fault lands in the log instead of quietly shortening every message from then on.
 
-**One event is one message, even when it arrives twice.** A runner that died after this plugin
-finished an event, but before amenbo could take that row off the queue, delivers it again — and
-nobody reading the channel could tell that second message from a real one. So what has been sent
-is written down, keyed by what happened, to which record, at which moment, and a key already
-there stops the send. The record is a bounded tail in the plugin's own installed directory, which
-`plugin uninstall` takes away with everything else. **What is not stopped is you doing the same
-thing twice**: two writes are two moments, and both are reported. See [`sent.go`](sent.go).
+**An event delivered twice is reported once.** A runner that died after this plugin took an event in,
+but before amenbo could take that row off the queue, delivers it again — and nobody reading the
+channel could tell that second line from a real one. So what has been taken in is written down, keyed
+by what happened, to which record, at which moment, and a key already there stops the run before
+anything is read, held or sent. The record is a bounded tail in the plugin's own installed directory,
+which `plugin uninstall` takes away with everything else. **What is not stopped is you doing the same
+thing twice**: two writes are two moments, and both are reported. See [`taken.go`](taken.go).
 
-**Nothing is retried.** amenbo drops a failed event and never retries it; two sides retrying one
-send is how one message becomes three, with nobody able to say why. A send that failed is not
-written down either, so a delivery amenbo does repeat carries the message that never arrived. See
+**How much is behind you is the runner's to say, and batching is the plugin's to do.** A plugin cannot
+see its own queue — it is launched once per event — so the runner hands over how many are still
+queued after this one. Zero is what a flush waits for, and zero is not a promise that nothing more is
+coming: an event written a moment later is delivered like any other, so a batch may be followed by a
+second one. That is one message becoming two, never a message lost. What is waiting is written down
+before anything is sent, because a launch that does not come back would otherwise take it along. See
+[`pending.go`](pending.go).
+
+**Nothing is retried.** amenbo drops a failed event and never retries it; two sides retrying one send
+is how one message becomes three, with nobody able to say why. A flush that Slack refused leaves its
+lines still owed instead, so the next one carries them — they are late, not lost. See
 [`hook.go`](hook.go) and [`slack.go`](slack.go).
 
 ## Build

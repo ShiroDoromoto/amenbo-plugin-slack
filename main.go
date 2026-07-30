@@ -157,8 +157,9 @@ func do(err error) {
 func usage() {
 	logf(`slack — amenbo's official plugin: report your AI's writes to a Slack channel
 
-This plugin is not called. amenbo starts it when an event fires, and it sends one message
-per event it reports.
+This plugin is not called. amenbo starts it when an event fires, and it reports the event as one
+line. Lines wait while amenbo says more events are queued, so a burst — a project deleted, a pile
+cleared — arrives as one message rather than tens.
 
 Only the writes an AI drove are reported: the ones you drove yourself, you were there for.
 Which of them reach the channel is yours to choose — by default a task created, its status

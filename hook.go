@@ -49,34 +49,60 @@ var defaultEvents = []string{eventTaskCreated, eventStatusChanged, eventTaskDone
 // `config` object on stdin rather than in the environment.
 const eventsSetting = "events"
 
-// hook is the observation face: amenbo fired an event, and this is the message it becomes.
+// hook is the observation face. Every launch does two things, and they are separate: it may turn this
+// event into a line, and it may send what is owed.
 //
-// Four filters stand in front of the send, and each one is a silence rather than a failure — a
-// document from a contract this plugin cannot read, a write the user drove themselves, an event they
-// did not ask to hear about, and an event that was already sent are all runs with nothing to say,
-// not runs that went wrong.
+// **Taking the event in.** Four filters stand in front of that, and each one is a silence rather than
+// a failure — a document from a contract this plugin cannot read, a write the user drove themselves,
+// an event the user did not ask to hear about, and an event already taken in are all events with
+// nothing to add. What is added is written down before anything else happens, so a launch that does
+// not come back has not swallowed it.
 //
-// What can go wrong is the send, and the read behind it. The two are not the same failure: a
-// webhook that will not take the message means nothing was reported, while a record that could
-// not be read back costs the message its title and nothing else. So the message goes out either
-// way, carrying what was readable, and the run still ends non-zero so the fault lands in the
-// execution log instead of quietly shortening every message from here on.
+// **Sending what is owed.** This is the runner's question, not the event's: while anything is still
+// queued for this plugin, the lines wait; when nothing is, they go out as one message. Which is why
+// the flush is not behind those filters — a burst that ends in events nobody asked to hear about
+// would otherwise leave the lines in front of them waiting for the next reportable write, which may
+// be hours away or never (found on a real store: four creations followed by four deletions nobody
+// subscribed to, and three lines stranded).
+//
+// What can go wrong is the send, and the read behind it. The two are not the same failure: a webhook
+// that will not take the message means nothing was reported — and what was owed stays owed, so the
+// next flush carries it — while a record that could not be read back costs one line its title and
+// nothing else. So the message goes out either way, carrying what was readable, and the run still
+// ends non-zero so the fault lands in the execution log instead of quietly shortening every message
+// from here on.
 func hook(in input) error {
-	if in.V != contractVersion {
-		return nil
+	batch := held()
+	var readErr, holdErr, takeErr error
+
+	if reportable(in) {
+		taken := recall()
+		key := takenKey(in)
+		// An event delivered twice adds no second line, and the flush below still runs: this
+		// launch may be the one with nothing behind it (see taken.go).
+		if !taken.holds(key) {
+			var about subject
+			about, readErr = describe(in)
+			batch.add(sentence(in.Event, in.New, about))
+			// Nothing from here on may stop the send. A store that cannot be written is a
+			// fault worth a failed run, but holding a line back on account of it would mean
+			// carrying it in a process that is about to end — so the batching is what gives
+			// way, not the notification.
+			if holdErr = batch.save(); holdErr != nil {
+				batch.loosen()
+			}
+			// Recorded as taken in, once it is as safely held as it is going to be: from
+			// here on this event has been dealt with, whether its line goes out in this
+			// run's message or a later one.
+			takeErr = taken.add(key)
+		}
 	}
-	if in.Actor != actorAI {
-		return nil
+
+	if len(batch.messages) == 0 {
+		return firstFault(holdErr, takeErr)
 	}
-	if !selected(in)[in.Event] {
-		return nil
-	}
-	// Before anything is read or sent: an event delivered twice is one message, and the second
-	// delivery is amenbo's bookkeeping rather than news (see sent.go).
-	sent := recall()
-	key := sentKey(in)
-	if sent.holds(key) {
-		return nil
+	if batch.durable() && remaining() > 0 {
+		return firstFault(takeErr, readFailure(readErr))
 	}
 
 	webhook := os.Getenv(webhookEnv)
@@ -85,18 +111,36 @@ func hook(in input) error {
 		// here means the value was taken away from underneath a gate that is already open.
 		return fmt.Errorf("no webhook to post to — set it with 'amenbo plugin config set slack webhook_url <url>'")
 	}
-
-	about, readErr := about(in)
-	if err := post(webhook, sentence(in.Event, in.New, about)); err != nil {
+	if err := post(webhook, batch.text()); err != nil {
 		return err
 	}
-	// Recorded only once the message is out: a send that failed was not a delivery, so a replay of
-	// it should carry the message rather than skip it.
-	if err := sent.add(key); err != nil {
-		return fmt.Errorf("the message went out, but this run may repeat it: %w", err)
+	clearErr := batch.clear()
+	return firstFault(holdErr, takeErr, clearErr, readFailure(readErr))
+}
+
+// reportable says whether this event becomes a line: one this plugin can read, driven by the AI, and
+// asked for.
+func reportable(in input) bool {
+	return in.V == contractVersion && in.Actor == actorAI && selected(in)[in.Event]
+}
+
+// readFailure is what a run ends on when the record behind a line could not be read: the line was
+// still delivered, so this is a fault to log rather than work to redo.
+func readFailure(err error) error {
+	if err == nil {
+		return nil
 	}
-	if readErr != nil {
-		return fmt.Errorf("the message went out without what it could not read: %w", readErr)
+	return fmt.Errorf("the message went out without what it could not read: %w", err)
+}
+
+// firstFault is the one a run ends on. Every fault here is about bookkeeping around a message that
+// did go out, so they are alike in what they cost: the exit code puts the run in the execution log,
+// and the first reason is the one worth reading.
+func firstFault(faults ...error) error {
+	for _, fault := range faults {
+		if fault != nil {
+			return fault
+		}
 	}
 	return nil
 }
@@ -143,7 +187,7 @@ type subject struct {
 	title string
 }
 
-// about names what the message is about, reading back whatever the payload only named. Which read
+// describe names what a line is about, reading back whatever the payload only named. Which read
 // that is depends on the event, and one of them cannot be read at all:
 //
 //   - a live task or decision is read back by its id — the ordinary case
@@ -153,7 +197,7 @@ type subject struct {
 //     hangs on, and there is nothing to ask for one with
 //   - a comment **taken back** does name its task — the payload carries it as the parent — so
 //     that one is read back after all
-func about(in input) (subject, error) {
+func describe(in input) (subject, error) {
 	switch in.Event {
 	case eventTaskDeleted:
 		return subject{name: fmt.Sprintf("task #%d", in.ID), title: in.recordField("title")}, nil
