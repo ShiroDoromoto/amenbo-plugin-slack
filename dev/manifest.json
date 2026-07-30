@@ -10,7 +10,38 @@
   "payload_v": 1,
   "min_amenbo": "2.0.0",
   "config": [
-    { "key": "webhook_url", "label": "Slack webhook URL", "secret": true, "required": true }
+    { "key": "webhook_url", "label": "Slack webhook URL", "secret": true, "required": true },
+    {
+      "key": "events",
+      "label": "What to report",
+      "type": "multi",
+      "default": "task.created,task.status_changed,task.done,task.rejected",
+      "options": [
+        { "value": "task.created", "label": "A task was created" },
+        { "value": "task.status_changed", "label": "A task's status moved" },
+        { "value": "task.done", "label": "A task was finished" },
+        { "value": "task.rejected", "label": "A task was decided against" },
+        { "value": "task.assigned", "label": "A task was assigned" },
+        { "value": "task.moved", "label": "A task moved to another project" },
+        { "value": "task.deleted", "label": "A task was deleted" },
+        { "value": "decision.accepted", "label": "A decision was accepted" },
+        { "value": "decision.rejected", "label": "A decision was rejected" },
+        { "value": "comment.added", "label": "A comment was added" },
+        { "value": "comment.removed", "label": "A comment was taken back" }
+      ]
+    }
   ],
-  "events": ["task.created", "task.status_changed", "task.done", "task.rejected"]
+  "events": [
+    "task.created",
+    "task.status_changed",
+    "task.done",
+    "task.rejected",
+    "task.assigned",
+    "task.moved",
+    "task.deleted",
+    "decision.accepted",
+    "decision.rejected",
+    "comment.added",
+    "comment.removed"
+  ]
 }

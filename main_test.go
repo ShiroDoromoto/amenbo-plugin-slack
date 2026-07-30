@@ -60,7 +60,7 @@ func TestReadInputDropsADocumentThatWillNotParse(t *testing.T) {
 
 	in := readInput(stdinWith(t, `{not json`))
 
-	if in != (input{}) {
+	if !nothingRead(in) {
 		t.Errorf("nothing should be read out of it, got %+v", in)
 	}
 	if !strings.Contains(stderr.String(), "will not parse") {
@@ -70,9 +70,16 @@ func TestReadInputDropsADocumentThatWillNotParse(t *testing.T) {
 
 // Nothing on stdin is the ordinary shape of a hand run, not an error.
 func TestReadInputTakesAnEmptyStdin(t *testing.T) {
-	if in := readInput(stdinWith(t, "")); in != (input{}) {
+	if in := readInput(stdinWith(t, "")); !nothingRead(in) {
 		t.Errorf("an empty document is no event, got %+v", in)
 	}
+}
+
+// nothingRead is what a dropped or absent document reads as. Spelled out field by field, since a
+// payload carrying maps is not a value Go will compare for us.
+func nothingRead(in input) bool {
+	return in.V == 0 && in.Event == "" && in.ID == 0 && in.Actor == "" && in.New == "" &&
+		in.Record == nil && in.Parent == nil && in.Config == nil
 }
 
 // The usage text names the setting and the switch, since a plugin that reported nothing is

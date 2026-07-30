@@ -8,7 +8,7 @@ AI moved AMB-T-42 to in_progress — Ship the thing
 AI finished AMB-T-42 — Ship the thing
 ```
 
-Two things decide what arrives.
+Three things decide what arrives.
 
 - **Only the AI's writes.** Every event names who drove it, and a write you drove yourself is
   one you were present for — a channel repeating it back to you is noise. What is worth a
@@ -16,6 +16,8 @@ Two things decide what arrives.
 - **The channel is the setting.** `webhook_url` is a secret setting, and a setting belongs to a
   project, so the value itself is which channel a project reports to. Point two projects at two
   webhooks and they report to two channels; there is no channel name anywhere in the plugin.
+- **Which events, you choose.** `events` is a list you tick, from everything amenbo fires. Its
+  default is the four above, and both the choice and the channel are answered per project.
 
 ## Use
 
@@ -27,26 +29,49 @@ amenbo plugin enable slack            # installing never runs anything; this is 
 
 Run these from the folder amenbo is bound to: the setting and the switch are that project's.
 
-### What is reported
+### What can be reported
+
+Every event amenbo fires is on offer, and each one has its own sentence. One event is one message.
+The four in **bold** are what a channel gets until you say otherwise.
 
 | Event | The message |
 |---|---|
-| `task.created` | `AI created <task>` |
-| `task.status_changed` | `AI moved <task> to <status>` |
-| `task.done` | `AI finished <task>` |
-| `task.rejected` | `AI decided against <task>` |
+| **`task.created`** | `AI created <task>` |
+| **`task.status_changed`** | `AI moved <task> to <status>` |
+| **`task.done`** | `AI finished <task>` |
+| **`task.rejected`** | `AI decided against <task>` |
+| `task.assigned` | `AI assigned <task> to <who>` |
+| `task.moved` | `AI moved <task> into <project>` |
+| `task.deleted` | `AI deleted <task>` |
+| `decision.accepted` | `AI accepted <decision>` |
+| `decision.rejected` | `AI rejected <decision>` |
+| `comment.added` | `AI added comment #<n>` |
+| `comment.removed` | `AI took back a comment on <task>` |
 
-`<task>` is the task's ref and title. One event is one message.
+`<task>` and `<decision>` are the record's ref and its title, read back from the store. Two of them
+cannot be: a **deleted** task is gone, so its title comes off the vanished record the event carries
+in its place, and a comment **added** names only itself — nothing on the wire says which task it
+hangs on, and there is nothing to ask for one with. A comment **taken back** does name its task, so
+that one is read back after all.
 
 ### Settings
 
 | key | what it does |
 |---|---|
 | `webhook_url` | The Slack [incoming webhook](https://api.slack.com/messaging/webhooks) to post to. Secret, and required — a plugin with nowhere to post does nothing, so `enable` is refused until it holds a value. |
+| `events` | What to report, ticked from the table above. Defaults to the four in bold. |
 
-Being declared secret is what keeps it out of an `export` and out of the `config` object on
-stdin: amenbo hands it over in the environment instead, and this plugin reads it from there.
-It never reads a secret file of its own.
+```sh
+amenbo plugin config set slack events task.done,task.rejected     # only the terminals
+```
+
+**Choosing none is an answer, and it is honoured** — the plugin stays enabled and reports nothing,
+which is a different thing from never having answered. Clearing the setting (an empty value) puts
+the default back.
+
+Being declared secret is what keeps the webhook out of an `export` and out of the `config` object on
+stdin: amenbo hands it over in the environment instead, and this plugin reads it from there. It never
+reads a secret file of its own. The choice is not a secret, so it arrives on stdin with the event.
 
 ## Why nothing arrived
 

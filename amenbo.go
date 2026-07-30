@@ -42,25 +42,37 @@ var runAmenbo = func(args ...string) ([]byte, error) {
 // two to declare.
 var actorFlag = []string{"--actor", "ai"}
 
-// taskShow reads back the two things a message needs about a task: the ref a reader can look
-// it up by, and its title. A payload carries neither — it names the record and stops there.
+// taskShow reads back the two things a message needs about a task: the ref a reader can look it
+// up by, and its title. A payload carries neither — it names the record and stops there.
+func taskShow(id int64) (ref, title string, err error) {
+	return show("task", id)
+}
+
+// decisionShow is the same read on the other record a v1 event can name.
+func decisionShow(id int64) (ref, title string, err error) {
+	return show("decision", id)
+}
+
+// show reads one record back — `amenbo <kind> show <id> --json` — and takes the two fields a
+// message is built from. A task and a decision answer with the same two names, so one reader
+// covers both.
 //
 // A failure here is returned rather than raised: what it costs is the title, not the message
-// (see hook). The refusals worth expecting are a window that does not cover this task and a
+// (see hook). The refusals worth expecting are a window that does not cover this record and a
 // store the caller's amenbo cannot open, and both say so on stderr, which is carried into the
 // error so the execution log holds the reason and not just the fact.
-func taskShow(id int64) (ref, title string, err error) {
-	args := append([]string{"task", "show", strconv.FormatInt(id, 10), "--json"}, actorFlag...)
+func show(kind string, id int64) (ref, title string, err error) {
+	args := append([]string{kind, "show", strconv.FormatInt(id, 10), "--json"}, actorFlag...)
 	raw, err := runAmenbo(args...)
 	if err != nil {
 		return "", "", err
 	}
-	var task struct {
+	var record struct {
 		Ref   string `json:"ref"`
 		Title string `json:"title"`
 	}
-	if err := json.Unmarshal(raw, &task); err != nil {
-		return "", "", fmt.Errorf("reading back task %d: %w", id, err)
+	if err := json.Unmarshal(raw, &record); err != nil {
+		return "", "", fmt.Errorf("reading back %s %d: %w", kind, id, err)
 	}
-	return task.Ref, task.Title, nil
+	return record.Ref, record.Title, nil
 }

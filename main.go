@@ -71,6 +71,23 @@ type input struct {
 	// New is the record's state after the change, for the events whose name does not
 	// already say it.
 	New string `json:"new"`
+	// Record is the vanished record itself, on the deletion events alone: there is nothing
+	// left to read back, so the row travels on the wire in its place. Its keys are the
+	// record's own columns.
+	Record map[string]any `json:"record"`
+	// Parent is what a vanished child hung on, by number — a removed comment's task. Nil on
+	// every event that has no parent, and on an older store's deletion that carried none.
+	Parent *int64 `json:"parent"`
+	// Config holds the plugin's own non-secret settings, as the user filled them in. Secrets
+	// never appear here: amenbo puts those in the environment instead.
+	Config map[string]any `json:"config"`
+}
+
+// recordField reads one field of the vanished record as text. A value that is not a string is
+// not one this plugin can put in a sentence, and reads as absent rather than being coerced.
+func (in input) recordField(key string) string {
+	text, _ := in.Record[key].(string)
+	return strings.TrimSpace(text)
 }
 
 // readInput reads the document amenbo feeds on stdin.
@@ -132,11 +149,14 @@ func usage() {
 This plugin is not called. amenbo starts it when an event fires, and it sends one message
 per event it reports.
 
-Reported: a task created, its status moved, and either terminal — done or decided against.
-Only the writes an AI drove: the ones you drove yourself, you were there for.
+Only the writes an AI drove are reported: the ones you drove yourself, you were there for.
+Which of them reach the channel is yours to choose — by default a task created, its status
+moved, and either terminal (done or decided against).
 
 Settings:
   webhook_url   the Slack incoming webhook to post to (secret, required)
+  events        what to report, from the eleven amenbo fires (defaults to the four above;
+                choosing none is honoured, and reports nothing)
 
 The setting belongs to a project, so the value is which channel that project reports to.
 Fill it in with 'amenbo plugin config set slack webhook_url <url>', then switch the plugin

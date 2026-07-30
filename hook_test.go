@@ -9,9 +9,17 @@ import (
 	"testing"
 )
 
-// aiWrite is the payload for one write the user's AI drove.
+// aiWrite is the payload for one write the user's AI drove, with the setting unanswered — so what
+// it reports is the default four.
 func aiWrite(event string) input {
 	return input{V: contractVersion, Event: event, ID: 42, Actor: actorAI}
+}
+
+// reporting is the same payload with the setting answered, naming the events to report.
+func reporting(event string, chosen ...string) input {
+	in := aiWrite(event)
+	in.Config = map[string]any{eventsSetting: strings.Join(chosen, ",")}
+	return in
 }
 
 // slackStands stands in for Slack: it collects every message posted to it and hands back the
@@ -32,17 +40,17 @@ func slackStands(t *testing.T) *[]string {
 	return &posted
 }
 
-// readsBack stands in for amenbo, answering `task show --json` with one task.
-func readsBack(t *testing.T, ref, title string) {
+// readsBack stands in for amenbo, answering a `show --json` on any record with one ref and title.
+func readsBack(t *testing.T, ref, title string) *[]string {
 	t.Helper()
+	var asked []string
 	previous := runAmenbo
 	runAmenbo = func(args ...string) ([]byte, error) {
-		if strings.Join(args, " ") != "task show 42 --json --actor ai" {
-			t.Errorf("the title should be read back by the id the payload carried, got %v", args)
-		}
+		asked = append(asked, strings.Join(args, " "))
 		return []byte(fmt.Sprintf(`{"ref":%q,"title":%q,"status":"done"}`, ref, title)), nil
 	}
 	t.Cleanup(func() { runAmenbo = previous })
+	return &asked
 }
 
 // refusesToRead stands in for an amenbo that would not answer.
@@ -53,10 +61,11 @@ func refusesToRead(t *testing.T, because string) {
 	t.Cleanup(func() { runAmenbo = previous })
 }
 
-// One event the AI drove is one message, and it says what was done to which task.
+// One event the AI drove is one message, and it says what was done to which task — read back by the
+// id the payload carried, under a declared facet.
 func TestHookSendsOneMessagePerEvent(t *testing.T) {
 	posted := slackStands(t)
-	readsBack(t, "AMB-T-42", "Ship the thing")
+	asked := readsBack(t, "AMB-T-42", "Ship the thing")
 
 	if err := hook(aiWrite(eventTaskDone)); err != nil {
 		t.Fatal(err)
@@ -68,10 +77,15 @@ func TestHookSendsOneMessagePerEvent(t *testing.T) {
 	if (*posted)[0] != "AI finished AMB-T-42 — Ship the thing" {
 		t.Errorf("unexpected message: %q", (*posted)[0])
 	}
+	if len(*asked) != 1 || (*asked)[0] != "task show 42 --json --actor ai" {
+		t.Errorf("unexpected read back: %v", *asked)
+	}
 }
 
-// Each reported event has its own sentence, and a status change carries the state it moved to.
+// Every event in the catalog has its own sentence, and the ones amenbo hands a new state spend it.
+// The title trails all of them.
 func TestSentenceSaysWhatHappened(t *testing.T) {
+	about := subject{name: "AMB-T-42", title: "Ship the thing"}
 	for _, c := range []struct {
 		event, newState, want string
 	}{
@@ -79,10 +93,145 @@ func TestSentenceSaysWhatHappened(t *testing.T) {
 		{eventTaskDone, "", "AI finished AMB-T-42 — Ship the thing"},
 		{eventTaskRejected, "", "AI decided against AMB-T-42 — Ship the thing"},
 		{eventStatusChanged, "in_progress", "AI moved AMB-T-42 to in_progress — Ship the thing"},
+		{eventTaskAssigned, "ai", "AI assigned AMB-T-42 to ai — Ship the thing"},
+		{eventTaskMoved, "another-project", "AI moved AMB-T-42 into another-project — Ship the thing"},
+		{eventTaskDeleted, "", "AI deleted AMB-T-42 — Ship the thing"},
+		{eventDecisionAccepted, "", "AI accepted AMB-T-42 — Ship the thing"},
+		{eventDecisionRejected, "", "AI rejected AMB-T-42 — Ship the thing"},
+		{eventCommentAdded, "", "AI added AMB-T-42 — Ship the thing"},
+		{eventCommentRemoved, "", "AI took back AMB-T-42 — Ship the thing"},
 	} {
-		if got := sentence(c.event, c.newState, "AMB-T-42", "Ship the thing"); got != c.want {
+		if got := sentence(c.event, c.newState, about); got != c.want {
 			t.Errorf("%s: got %q, want %q", c.event, got, c.want)
 		}
+	}
+}
+
+// A deleted task cannot be read back, so its title rides on the vanished record the payload carries
+// in place of the record itself.
+func TestHookNamesADeletedTaskFromTheVanishedRecord(t *testing.T) {
+	posted := slackStands(t)
+	asked := readsBack(t, "AMB-T-42", "read back, which should not happen here")
+
+	in := reporting(eventTaskDeleted, eventTaskDeleted)
+	in.Record = map[string]any{"id": float64(42), "title": "Ship the thing", "status": "todo"}
+	if err := hook(in); err != nil {
+		t.Fatal(err)
+	}
+
+	if len(*posted) != 1 || (*posted)[0] != "AI deleted task #42 — Ship the thing" {
+		t.Fatalf("unexpected message: %v", *posted)
+	}
+	if len(*asked) != 0 {
+		t.Errorf("there is nothing left to read back: %v", *asked)
+	}
+}
+
+// A comment taken back names the task it hung on, which the payload carries as the parent — so that
+// one is read back after all, by the parent's id rather than the comment's.
+func TestHookNamesTheTaskARemovedCommentHungOn(t *testing.T) {
+	posted := slackStands(t)
+	asked := readsBack(t, "AMB-T-7", "Ship the thing")
+
+	parent := int64(7)
+	in := reporting(eventCommentRemoved, eventCommentRemoved)
+	in.Parent = &parent
+	if err := hook(in); err != nil {
+		t.Fatal(err)
+	}
+
+	if len(*posted) != 1 || (*posted)[0] != "AI took back a comment on AMB-T-7 — Ship the thing" {
+		t.Fatalf("unexpected message: %v", *posted)
+	}
+	if len(*asked) != 1 || !strings.HasPrefix((*asked)[0], "task show 7 ") {
+		t.Errorf("the parent is what gets read: %v", *asked)
+	}
+}
+
+// A comment added names itself: nothing on the wire says which task it hangs on, so the message says
+// what is known rather than guessing.
+func TestHookNamesAnAddedCommentByItsNumber(t *testing.T) {
+	posted := slackStands(t)
+	asked := readsBack(t, "AMB-T-42", "Ship the thing")
+
+	if err := hook(reporting(eventCommentAdded, eventCommentAdded)); err != nil {
+		t.Fatal(err)
+	}
+
+	if len(*posted) != 1 || (*posted)[0] != "AI added comment #42" {
+		t.Fatalf("unexpected message: %v", *posted)
+	}
+	if len(*asked) != 0 {
+		t.Errorf("there is nothing to read a comment back with: %v", *asked)
+	}
+}
+
+// A decision is read back on its own axis — the same two fields, a different record.
+func TestHookReadsADecisionBackAsADecision(t *testing.T) {
+	posted := slackStands(t)
+	asked := readsBack(t, "AMB-D-42", "Report only the AI's writes")
+
+	if err := hook(reporting(eventDecisionAccepted, eventDecisionAccepted)); err != nil {
+		t.Fatal(err)
+	}
+
+	if len(*posted) != 1 || (*posted)[0] != "AI accepted AMB-D-42 — Report only the AI's writes" {
+		t.Fatalf("unexpected message: %v", *posted)
+	}
+	if len(*asked) != 1 || !strings.HasPrefix((*asked)[0], "decision show 42 ") {
+		t.Errorf("a decision is not read back as a task: %v", *asked)
+	}
+}
+
+// The choice is what decides: an event the user asked for is reported, and one they did not is not,
+// however plainly it was fired.
+func TestHookReportsWhatTheUserChose(t *testing.T) {
+	posted := slackStands(t)
+	readsBack(t, "AMB-T-42", "Ship the thing")
+
+	if err := hook(reporting(eventCommentAdded, eventCommentAdded, eventTaskMoved)); err != nil {
+		t.Fatal(err)
+	}
+	if err := hook(reporting(eventTaskDone, eventCommentAdded, eventTaskMoved)); err != nil {
+		t.Fatal(err)
+	}
+
+	if len(*posted) != 1 || (*posted)[0] != "AI added comment #42" {
+		t.Errorf("only the chosen event should be reported: %v", *posted)
+	}
+}
+
+// Choosing none is an answer, and it is honoured: an empty setting reports nothing at all, rather
+// than being read as unset and quietly replaced by the default.
+func TestHookIsSilentWhenTheUserChoseNone(t *testing.T) {
+	posted := slackStands(t)
+	readsBack(t, "AMB-T-42", "Ship the thing")
+
+	for _, event := range catalog {
+		if err := hook(reporting(event)); err != nil {
+			t.Errorf("%s: silence is not a failure: %v", event, err)
+		}
+	}
+
+	if len(*posted) != 0 {
+		t.Errorf("nothing should be posted, got %v", *posted)
+	}
+}
+
+// No setting at all is not an answer — an amenbo from before it, or a manifest without it — so the
+// four the manifest declares as its default are what such a build reports.
+func TestHookFallsBackToTheDefaultWhenNothingWasDeclared(t *testing.T) {
+	posted := slackStands(t)
+	readsBack(t, "AMB-T-42", "Ship the thing")
+
+	for _, event := range catalog {
+		if err := hook(aiWrite(event)); err != nil {
+			t.Errorf("%s: %v", event, err)
+		}
+	}
+
+	if len(*posted) != len(defaultEvents) {
+		t.Errorf("the default four should be reported, got %v", *posted)
 	}
 }
 
@@ -102,29 +251,25 @@ func TestHookIsSilentAboutWhatTheUserDid(t *testing.T) {
 	}
 }
 
-// An event outside the four, and a contract this plugin cannot read, are silences too — runs
-// with nothing to say, not runs that went wrong.
-func TestHookIsSilentOnWhatItDoesNotReport(t *testing.T) {
+// A contract this plugin cannot read is a silence too — a run with nothing to say, not one that went
+// wrong.
+func TestHookIsSilentOnAContractItDoesNotRead(t *testing.T) {
 	posted := slackStands(t)
 	readsBack(t, "AMB-T-42", "Ship the thing")
 
-	unreported := aiWrite("comment.added")
 	otherContract := aiWrite(eventTaskDone)
 	otherContract.V = contractVersion + 1
-
-	for _, in := range []input{unreported, otherContract} {
-		if err := hook(in); err != nil {
-			t.Errorf("%+v: silence is not a failure: %v", in, err)
-		}
+	if err := hook(otherContract); err != nil {
+		t.Errorf("silence is not a failure: %v", err)
 	}
+
 	if len(*posted) != 0 {
 		t.Errorf("nothing should be posted, got %v", *posted)
 	}
 }
 
-// A title that could not be read back costs the message its title, not the message. The run
-// still ends non-zero, so the fault is in the execution log rather than in every message from
-// here on.
+// A title that could not be read back costs the message its title, not the message. The run still
+// ends non-zero, so the fault is in the execution log rather than in every message from here on.
 func TestHookReportsWithoutATitleItCouldNotRead(t *testing.T) {
 	posted := slackStands(t)
 	refusesToRead(t, "out_of_reach")
@@ -139,8 +284,8 @@ func TestHookReportsWithoutATitleItCouldNotRead(t *testing.T) {
 	}
 }
 
-// A webhook that refuses the message is a failure with nothing reported, and what it refused
-// it with is what the log needs.
+// A webhook that refuses the message is a failure with nothing reported, and what it refused it with
+// is what the log needs.
 func TestHookFailsWhenTheWebhookRefuses(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
@@ -157,8 +302,8 @@ func TestHookFailsWhenTheWebhookRefuses(t *testing.T) {
 	}
 }
 
-// The setting is required, so an empty one means it was taken away from under an open gate —
-// worth saying, and worth saying how to put it back.
+// The setting is required, so an empty one means it was taken away from under an open gate — worth
+// saying, and worth saying how to put it back.
 func TestHookFailsWithoutAWebhook(t *testing.T) {
 	t.Setenv(webhookEnv, "")
 
