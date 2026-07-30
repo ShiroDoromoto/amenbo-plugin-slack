@@ -1,0 +1,16 @@
+{
+  "name": "slack",
+  "desc": "Report what your AI did to a Slack channel",
+  "author": "amenbo",
+  "repo": "ShiroDoromoto/amenbo-plugin-slack",
+  "os": ["macos", "windows", "linux"],
+  "category": "notification",
+  "url": "https://github.com/ShiroDoromoto/amenbo-plugin-slack/releases/download/v1/slack-v1.tar.gz",
+  "checksum": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+  "payload_v": 1,
+  "min_amenbo": "2.0.0",
+  "config": [
+    { "key": "webhook_url", "label": "Slack webhook URL", "secret": true, "required": true }
+  ],
+  "events": ["task.created", "task.status_changed", "task.done", "task.rejected"]
+}
