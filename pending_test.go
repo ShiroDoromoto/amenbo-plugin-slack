@@ -1,6 +1,8 @@
 package main
 
 import (
+	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -55,6 +57,64 @@ func TestHookHoldsALineWhileTheQueueIsBehindIt(t *testing.T) {
 	}
 }
 
+// channel stands in for one project's Slack channel: it collects what is posted to it, and hands back
+// the webhook a run reaching that project would be given.
+func channel(t *testing.T) (*[]string, string) {
+	t.Helper()
+	var posted []string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var body struct{ Text string }
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Errorf("the message should be JSON: %v", err)
+		}
+		posted = append(posted, body.Text)
+		fmt.Fprint(w, "ok")
+	}))
+	t.Cleanup(server.Close)
+	return &posted, server.URL
+}
+
+// launch is one event delivered for one project: the reach and the webhook amenbo hands over are that
+// project's, and both change from launch to launch on a store holding two.
+func launch(t *testing.T, project, webhook string, queued int, in input) {
+	t.Helper()
+	t.Setenv(reachEnv, project)
+	t.Setenv(webhookEnv, webhook)
+	behind(t, queued)
+	if err := hook(in); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// A store holds every project at once while a webhook belongs to one, so what is held back is held
+// back for the project it came from: another project's launch flushes its own lines and only its own,
+// or a burst in one project would be posted into another's channel.
+func TestALineHeldForOneProjectIsNotFlushedByAnother(t *testing.T) {
+	t.Setenv(storeEnv, t.TempDir())
+	readsBack(t, "AMB-T-42", "Ship the thing")
+	first, firstHook := channel(t)
+	second, secondHook := channel(t)
+
+	// One project's burst: its line waits for the rest of that project's queue.
+	launch(t, "AMB-P-1", firstHook, 1, moment(eventTaskCreated, "2026-07-22T09:00:00Z"))
+	// The other project's launch has nothing behind it — and nothing of the first project's to send.
+	launch(t, "AMB-P-2", secondHook, 0, moment(eventTaskDone, "2026-07-22T09:00:01Z"))
+
+	if len(*second) != 1 || (*second)[0] != "AI finished AMB-T-42 — Ship the thing" {
+		t.Errorf("a channel should carry its own project's lines alone, got %v", *second)
+	}
+	if len(*first) != 0 {
+		t.Fatalf("the first project's line should still be waiting, got %v", *first)
+	}
+
+	// It goes out when its own queue empties, late rather than lost.
+	launch(t, "AMB-P-1", firstHook, 0, moment(eventTaskDone, "2026-07-22T09:00:02Z"))
+
+	if len(*first) != 1 || !strings.Contains((*first)[0], "AI created AMB-T-42") {
+		t.Errorf("the held line should arrive on its own project's flush, got %v", *first)
+	}
+}
+
 // What is held is written down before anything else happens, because a launch ends after one event and
 // the row it was for has already left the queue — nothing on amenbo's side is waiting to hand it over
 // again.
@@ -68,7 +128,7 @@ func TestWhatIsHeldSurvivesTheRunThatHeldIt(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	path := filepath.Join(home, "plugins", pluginName, pendingFile)
+	path := filepath.Join(stateDir(home, oneProject), pendingFile)
 	raw, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("what is owed should be on disk at %s: %v", path, err)
@@ -103,7 +163,7 @@ func TestWhatWentOutIsNoLongerOwed(t *testing.T) {
 	if strings.Contains((*posted)[1], "AI created") {
 		t.Errorf("the second message repeats what the first carried: %q", (*posted)[1])
 	}
-	if _, err := os.Stat(filepath.Join(home, "plugins", pluginName, pendingFile)); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(stateDir(home, oneProject), pendingFile)); !os.IsNotExist(err) {
 		t.Errorf("nothing should be owed after a flush: %v", err)
 	}
 }

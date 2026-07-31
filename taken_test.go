@@ -8,13 +8,24 @@ import (
 	"testing"
 )
 
+// oneProject is the project a test's runs reach unless it says otherwise. amenbo launches a plugin
+// for the project whose event fired and names it by ref, so a test that says nothing about it is
+// still a test of one project.
+const oneProject = "AMB-P-1"
+
 // remembers points the plugin at a store of its own for the length of one test, so what it writes
 // down lands in a temp directory rather than in anyone's app-data.
 func remembers(t *testing.T) string {
 	t.Helper()
 	home := t.TempDir()
 	t.Setenv(storeEnv, home)
+	t.Setenv(reachEnv, oneProject)
 	return home
+}
+
+// stateDir is where the runs reaching one project keep what they remember between them.
+func stateDir(home, project string) string {
+	return filepath.Join(home, "plugins", pluginName, project)
 }
 
 // moment is one write, at one moment: the payload amenbo delivers, and delivers again if a runner
@@ -63,9 +74,10 @@ func TestHookReportsTheSameEventAtAnotherMoment(t *testing.T) {
 	}
 }
 
-// The record lives in the plugin's own installed directory, so removing the plugin takes it away
-// with everything else it left behind.
-func TestTheRecordLivesWithTheInstalledPlugin(t *testing.T) {
+// The record lives in the plugin's own installed directory, under the project it is about — so
+// removing the plugin takes it away with everything else it left behind, and a second project on
+// the same store is remembered apart from this one.
+func TestTheRecordLivesWithTheInstalledPluginUnderItsProject(t *testing.T) {
 	home := remembers(t)
 	slackStands(t)
 	readsBack(t, "AMB-T-42", "Ship the thing")
@@ -74,7 +86,7 @@ func TestTheRecordLivesWithTheInstalledPlugin(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	path := filepath.Join(home, "plugins", pluginName, takenFile)
+	path := filepath.Join(stateDir(home, oneProject), takenFile)
 	raw, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("nothing was written down at %s: %v", path, err)
@@ -97,7 +109,7 @@ func TestTheRecordKeepsOnlyItsTail(t *testing.T) {
 		}
 	}
 
-	raw, err := os.ReadFile(filepath.Join(home, "plugins", pluginName, takenFile))
+	raw, err := os.ReadFile(filepath.Join(stateDir(home, oneProject), takenFile))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -107,6 +119,90 @@ func TestTheRecordKeepsOnlyItsTail(t *testing.T) {
 	}
 	if strings.Contains(string(raw), "09:00:00") {
 		t.Error("the oldest keys should have fallen off the front")
+	}
+}
+
+// A launch amenbo named no project for still has somewhere to remember: a corner of its own, kept
+// apart from every project rather than shared with them. A run by hand is what lands there.
+func TestARunWithNoProjectNamedKeepsItsOwnCorner(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv(storeEnv, home)
+	t.Setenv(reachEnv, "")
+	slackStands(t)
+	readsBack(t, "AMB-T-42", "Ship the thing")
+
+	if err := hook(moment(eventTaskDone, "2026-07-22T09:00:00Z")); err != nil {
+		t.Fatal(err)
+	}
+
+	path := filepath.Join(stateDir(home, noReach), takenFile)
+	if _, err := os.Stat(path); err != nil {
+		t.Errorf("nothing was written down at %s: %v", path, err)
+	}
+}
+
+// The project arrives as an environment variable's value, and the value names a directory. So what
+// it can name is one directory under the plugin, whatever it says — a reach that read as a path
+// would write the plugin's state outside the plugin.
+func TestAReachThatWouldWalkOutStaysUnderThePlugin(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv(storeEnv, home)
+	t.Setenv(reachEnv, "../../elsewhere")
+	slackStands(t)
+	readsBack(t, "AMB-T-42", "Ship the thing")
+
+	if err := hook(moment(eventTaskDone, "2026-07-22T09:00:00Z")); err != nil {
+		t.Fatal(err)
+	}
+
+	dir := reachDir()
+	if strings.ContainsAny(dir, `/\`) || strings.Contains(dir, "..") {
+		t.Fatalf("a reach should name one directory and nothing above it, got %q", dir)
+	}
+	path := filepath.Join(stateDir(home, dir), takenFile)
+	if _, err := os.Stat(path); err != nil {
+		t.Errorf("the record should still be under the plugin, at %s: %v", path, err)
+	}
+}
+
+// State from before it was kept per project is dropped rather than carried over: it was written
+// while every project shared it, so no project can claim it. Here the shared record holds this very
+// event's key — adopting it would swallow the message — and the shared batch holds a line from
+// somewhere unknown.
+func TestStateFromBeforeTheProjectSplitIsDropped(t *testing.T) {
+	home := remembers(t)
+	posted := slackStands(t)
+	readsBack(t, "AMB-T-42", "Ship the thing")
+
+	shared := filepath.Join(home, "plugins", pluginName)
+	if err := os.MkdirAll(shared, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	left := map[string]string{
+		pendingFile: "\"AI created AMB-T-9 — from some project or other\"\n",
+		takenFile:   "task.done 42 2026-07-22T09:00:00Z\n",
+	}
+	for name, body := range left {
+		if err := os.WriteFile(filepath.Join(shared, name), []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	behind(t, 0)
+	if err := hook(moment(eventTaskDone, "2026-07-22T09:00:00Z")); err != nil {
+		t.Fatal(err)
+	}
+
+	if len(*posted) != 1 {
+		t.Fatalf("this project's own event should go out, got %v", *posted)
+	}
+	if strings.Contains((*posted)[0], "from some project or other") {
+		t.Errorf("a line no project can claim should not go out here: %q", (*posted)[0])
+	}
+	for name := range left {
+		if _, err := os.Stat(filepath.Join(shared, name)); !os.IsNotExist(err) {
+			t.Errorf("%s should have been taken away: %v", name, err)
+		}
 	}
 }
 

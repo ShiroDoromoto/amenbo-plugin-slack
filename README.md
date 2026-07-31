@@ -62,6 +62,11 @@ holds no webhook, so `enable` there is refused rather than quietly borrowing ano
 channel — and the gate is per project too, so switching the plugin off in one leaves the others
 reporting.
 
+What the plugin keeps between runs is split the same way. A store holds every project at once, so
+the lines a burst is holding and the record of what has already been taken in are kept under the
+project they came from — otherwise the run that flushed a batch would post whatever was waiting into
+whichever channel it happened to be launched for.
+
 ### What can be reported
 
 Every event amenbo fires is on offer, and each one has its own sentence — one line. The four in
@@ -101,7 +106,12 @@ AI finished AMB-T-42 — Ship the thing
 
 A quiet channel is unaffected: one event with nothing behind it is one message, as before. And a
 batch is never a message held indefinitely — amenbo delivers as fast as it can, so what is waiting is
-waiting on the events already queued in front of it, nothing else.
+waiting on the events already queued in front of it.
+
+One thing to know if you run two projects on one machine: the count amenbo hands over is the whole
+plugin's queue, not this project's. So when the two are firing at once, a line held by one of them
+waits for that project's own next flush rather than for the end of the queue it was counted against.
+It is late, not lost — and a project working on its own never meets it.
 
 ### Settings
 
@@ -174,16 +184,20 @@ but before amenbo could take that row off the queue, delivers it again — and n
 channel could tell that second line from a real one. So what has been taken in is written down, keyed
 by what happened, to which record, at which moment, and a key already there stops the run before
 anything is read, held or sent. The record is a bounded tail in the plugin's own installed directory,
-which `plugin uninstall` takes away with everything else. **What is not stopped is you doing the same
-thing twice**: two writes are two moments, and both are reported. See [`taken.go`](taken.go).
+under the project it is about, which `plugin uninstall` takes away with everything else. **What is
+not stopped is you doing the same thing twice**: two writes are two moments, and both are reported.
+See [`taken.go`](taken.go).
 
 **How much is behind you is the runner's to say, and batching is the plugin's to do.** A plugin cannot
 see its own queue — it is launched once per event — so the runner hands over how many are still
 queued after this one. Zero is what a flush waits for, and zero is not a promise that nothing more is
 coming: an event written a moment later is delivered like any other, so a batch may be followed by a
 second one. That is one message becoming two, never a message lost. What is waiting is written down
-before anything is sent, because a launch that does not come back would otherwise take it along. See
-[`pending.go`](pending.go).
+before anything is sent, because a launch that does not come back would otherwise take it along —
+and it is written down under the project it belongs to, the window amenbo hands over for reading
+records back being what tells one project's state from another's. A build that kept that state for
+the whole store left behind files no project can claim, so the first run under the split drops them
+rather than delivering them to a guess. See [`pending.go`](pending.go).
 
 **Nothing is retried.** amenbo drops a failed event and never retries it; two sides retrying one send
 is how one message becomes three, with nobody able to say why. A flush that Slack refused leaves its

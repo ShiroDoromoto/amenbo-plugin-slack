@@ -33,16 +33,69 @@ const takenFile = "taken-events.log"
 // from growing without end.
 const remembered = 200
 
+// reachEnv carries the project this run reaches — the same window amenbo hands over for reading
+// records back, written as that project's ref, e.g. "AMB-P-1".
+const reachEnv = "AMENBO_PLUGIN_REACH"
+
+// noReach is where state goes when no project was named: a run by hand, or an amenbo from before
+// the variable. It is one bucket among the others rather than a shared one, and no project can land
+// in it by accident — a reach is a ref, and a ref never spells this.
+const noReach = "no-project"
+
 // statePath is where this plugin keeps what it has to remember between runs: in its own installed
 // directory, so `plugin uninstall` takes it away with everything else the plugin left behind, and a
 // second store keeps its own. Empty when no store was named — nothing launched this as a plugin, so
 // there is no home to write under.
+//
+// **Under the project, not the store.** A store holds every project at once while a webhook belongs
+// to one of them, so state shared across the store is state that crosses channels: a line held for
+// the rest of A's burst would be flushed by the next run that happens to be B's, into B's channel.
+// The reach is what separates them, and it is already on the launch.
 func statePath(name string) string {
 	home := strings.TrimSpace(os.Getenv(storeEnv))
 	if home == "" {
 		return ""
 	}
-	return filepath.Join(home, "plugins", pluginName, name)
+	return filepath.Join(home, "plugins", pluginName, reachDir(), name)
+}
+
+// reachDir is the directory a project's state sits in: its ref, made safe to put in a path. amenbo
+// writes a ref and nothing else, so today the mapping changes nothing; it is here because the name
+// comes in as an environment variable's value, and a value carrying a separator would write the
+// state somewhere other than under the plugin.
+func reachDir() string {
+	safe := strings.Map(func(r rune) rune {
+		switch {
+		case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r >= '0' && r <= '9', r == '-', r == '_':
+			return r
+		default:
+			return '_'
+		}
+	}, strings.TrimSpace(os.Getenv(reachEnv)))
+	if safe == "" {
+		return noReach
+	}
+	return safe
+}
+
+// dropLegacy takes away the state this plugin kept for the whole store, before it kept it per
+// project.
+//
+// It is not carried over, because there is no project to carry it to: those files were written
+// while every project shared them, so a line in them may have come from any of them — and giving
+// them to whichever project runs first is the misdelivery the split exists to end. What dropping
+// them costs is bounded and happens once: a batch that was waiting at the moment of the upgrade,
+// and a replay window that only ever has to outlast a burst.
+func dropLegacy() {
+	home := strings.TrimSpace(os.Getenv(storeEnv))
+	if home == "" {
+		return
+	}
+	for _, name := range []string{pendingFile, takenFile} {
+		if err := os.Remove(filepath.Join(home, "plugins", pluginName, name)); err == nil {
+			logf("slack: dropped %s from before this plugin kept its state per project — what it held belonged to no project in particular", name)
+		}
+	}
 }
 
 // writeWhole replaces a state file with these lines.

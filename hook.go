@@ -72,6 +72,8 @@ const eventsSetting = "events"
 // ends non-zero so the fault lands in the execution log instead of quietly shortening every message
 // from here on.
 func hook(in input) error {
+	// State is kept per project now; a run under the split leaves nothing of the older shape behind.
+	dropLegacy()
 	batch := held()
 	var readErr, holdErr, takeErr error
 
