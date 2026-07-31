@@ -157,7 +157,7 @@ the run ending non-zero so the reason is in the log.
 ### A burst arrives as one message
 
 Deleting a project, or clearing a pile of tasks, fires tens of events in a moment — and to you that
-was one act. So a line waits while amenbo says anything is still queued for this plugin, and the run
+was one act. So a line waits while amenbo says anything is still queued for this project, and the run
 that sees nothing behind it sends everything waiting as one message:
 
 ```
@@ -171,10 +171,9 @@ A quiet channel is unaffected: one event with nothing behind it is one message, 
 batch is never a message held indefinitely — amenbo delivers as fast as it can, so what is waiting is
 waiting on the events already queued in front of it.
 
-One thing to know if you run two projects on one machine: the count amenbo hands over is the whole
-plugin's queue, not this project's. So when the two are firing at once, a line held by one of them
-waits for that project's own next flush rather than for the end of the queue it was counted against.
-It is late, not lost — and a project working on its own never meets it.
+Two projects on one machine keep out of each other's way: the count amenbo hands over is this
+project's queue, and the lines held are this project's too, so each channel flushes on its own quiet
+moment and neither holds the other's lines back.
 
 ### Settings
 
@@ -257,14 +256,16 @@ See [`taken.go`](taken.go).
 
 **How much is behind you is the runner's to say, and batching is the plugin's to do.** A plugin cannot
 see its own queue — it is launched once per event — so the runner hands over how many are still
-queued after this one. Zero is what a flush waits for, and zero is not a promise that nothing more is
-coming: an event written a moment later is delivered like any other, so a batch may be followed by a
-second one. That is one message becoming two, never a message lost. What is waiting is written down
-before anything is sent, because a launch that does not come back would otherwise take it along —
-and it is written down under the project it belongs to, the window amenbo hands over for reading
-records back being what tells one project's state from another's. A build that kept that state for
-the whole store left behind files no project can claim, so the first run under the split drops them
-rather than delivering them to a guess. See [`pending.go`](pending.go).
+queued after this one for the project this launch fires for. Zero is what a flush waits for, and it is
+a zero this project can act on: the count, the lines held and the channel they go to are all the one
+project's. Zero is not a promise that nothing more is coming: an event written a moment later is
+delivered like any other, so a batch may be followed by a second one. That is one message becoming
+two, never a message lost. What is waiting is written down before anything is sent, because a launch
+that does not come back would otherwise take it along — and it is written down under the project it
+belongs to, the window amenbo hands over for reading records back being what tells one project's
+state from another's. A build that kept that state for the whole store left behind files no project
+can claim, so the first run under the split drops them rather than delivering them to a guess. See
+[`pending.go`](pending.go).
 
 **Nothing is retried.** amenbo drops a failed event and never retries it; two sides retrying one send
 is how one message becomes three, with nobody able to say why. A flush that Slack refused leaves its

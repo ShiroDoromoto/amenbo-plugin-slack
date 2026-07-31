@@ -14,11 +14,14 @@ import (
 // message instead of fifty.
 //
 // So a message is held while there is anything behind it, and the run that sees nothing behind it
-// sends everything held as one. Two things about that shape are worth stating outright:
+// sends everything held as one. Three things about that shape are worth stating outright:
 //
 //   - **The held messages are this plugin's to carry.** A launch ends after one event, and the row
 //     it was for has left the queue — nothing is waiting on amenbo's side, so what is held has to be
 //     on disk before anything else happens, or a run that never comes back takes it with it.
+//   - **The number counts this launch's project and no other.** A launch reaches one project, holds
+//     that project's lines and posts to that project's channel, so the count it flushes on is that
+//     project's too. Two projects firing at once neither delay nor flush each other.
 //   - **Zero is not a promise that nothing more is coming.** An event written a moment later is
 //     delivered like any other, so a batch flushed on zero may be followed by a second one. That is
 //     one message becoming two, never a message lost.
@@ -28,18 +31,20 @@ import (
 // would arrive as two messages.
 const pendingFile = "pending-messages.log"
 
-// queueRemainingEnv is how the runner says how much is behind this launch.
-const queueRemainingEnv = "AMENBO_PLUGIN_QUEUE_REMAINING"
+// reachQueueRemainingEnv is how the runner says how much is behind this launch, within the project
+// this launch fires for. It is the same scope as the reach itself, which is what the name says.
+const reachQueueRemainingEnv = "AMENBO_PLUGIN_REACH_QUEUE_REMAINING"
 
-// remaining is how many events are still queued for this plugin after this one.
+// remaining is how many events are still queued after this one for the project this launch fires for.
 //
 // A runner counts once at the start of a pass and hands out that count decreasing, so the numbers
-// reach zero however long the pass is. Nothing said, or something that will not parse as a count, is
-// read as zero: an amenbo that does not carry the variable, and a run by hand, both mean "there is
-// nothing behind this" — which is one message per event, the way it worked before the variable
-// existed.
+// reach zero however long the pass is. The count is this project's alone, which is what makes a zero
+// worth flushing on: the lines held here belong to this project too, and no other project's events
+// can keep them waiting. Nothing said, or something that will not parse as a count, is read as zero:
+// an amenbo too old to carry the variable, and a run by hand, both mean "there is nothing behind
+// this" — one message per event, which is a plainer channel and never a message lost.
 func remaining() int {
-	count, err := strconv.Atoi(strings.TrimSpace(os.Getenv(queueRemainingEnv)))
+	count, err := strconv.Atoi(strings.TrimSpace(os.Getenv(reachQueueRemainingEnv)))
 	if err != nil || count < 0 {
 		return 0
 	}

@@ -232,7 +232,7 @@ func TestHookFailsWhenItCannotWriteDownWhatItSent(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Setenv(storeEnv, blocked)
-	t.Setenv(queueRemainingEnv, "5")
+	t.Setenv(reachQueueRemainingEnv, "5")
 	posted := slackStands(t)
 	readsBack(t, "AMB-T-42", "Ship the thing")
 

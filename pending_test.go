@@ -12,10 +12,10 @@ import (
 	"testing"
 )
 
-// behind says how many events the runner has left after this launch.
+// behind says how many events the runner has left after this launch, in the project it fires for.
 func behind(t *testing.T, count int) {
 	t.Helper()
-	t.Setenv(queueRemainingEnv, strconv.Itoa(count))
+	t.Setenv(reachQueueRemainingEnv, strconv.Itoa(count))
 }
 
 // A burst is one act to the user, so it arrives as one message: every launch with something behind it
@@ -267,11 +267,11 @@ func TestHookSendsAtOnceWhenNothingSaysWhatIsBehind(t *testing.T) {
 	posted := slackStands(t)
 	readsBack(t, "AMB-T-42", "Ship the thing")
 
-	t.Setenv(queueRemainingEnv, "")
+	t.Setenv(reachQueueRemainingEnv, "")
 	if err := hook(moment(eventTaskDone, "2026-07-22T09:00:00Z")); err != nil {
 		t.Fatal(err)
 	}
-	t.Setenv(queueRemainingEnv, "not a number")
+	t.Setenv(reachQueueRemainingEnv, "not a number")
 	if err := hook(moment(eventTaskDone, "2026-07-22T09:00:01Z")); err != nil {
 		t.Fatal(err)
 	}
