@@ -20,7 +20,7 @@ func answersWith(t *testing.T, document string) *[]string {
 }
 
 func TestPreferencesAreReadBackFromTheStore(t *testing.T) {
-	asked := answersWith(t, `{"settings":{"language":"ja","ai_display_name":"さくら"}}`)
+	asked := answersWith(t, `{"settings":{"language":"ja","ai_display_name":"さくら","human_display_name":"山田"}}`)
 
 	got, err := readPreferences()
 	if err != nil {
@@ -31,6 +31,10 @@ func TestPreferencesAreReadBackFromTheStore(t *testing.T) {
 	}
 	if got.aiDisplayName != "さくら" {
 		t.Errorf("the AI should go by the name the store gives it, got %q", got.aiDisplayName)
+	}
+	// Both names come off the one answer, so naming the user costs no read of its own.
+	if got.humanDisplayName != "山田" {
+		t.Errorf("the user should go by the name the store gives them, got %q", got.humanDisplayName)
 	}
 	// One read, declaring the facet: every operation that uses one requires it.
 	want := []string{"config --json --actor ai"}
@@ -60,8 +64,8 @@ func TestPreferencesFallBackOnAnAnswerWithoutThem(t *testing.T) {
 	for name, document := range map[string]string{
 		"no settings at all":    `{"app_version":"3.1.0"}`,
 		"settings without them": `{"settings":{"onboarded":true}}`,
-		"answered as nothing":   `{"settings":{"language":null,"ai_display_name":null}}`,
-		"cleared to blanks":     `{"settings":{"language":"  ","ai_display_name":""}}`,
+		"answered as nothing":   `{"settings":{"language":null,"ai_display_name":null,"human_display_name":null}}`,
+		"cleared to blanks":     `{"settings":{"language":"  ","ai_display_name":"","human_display_name":"  "}}`,
 	} {
 		t.Run(name, func(t *testing.T) {
 			answersWith(t, document)
@@ -103,5 +107,20 @@ func TestPreferencesFallBackOnAnAnswerThatWillNotParse(t *testing.T) {
 	}
 	if got != defaultPreferences {
 		t.Errorf("got %+v, want the fallback %+v", got, defaultPreferences)
+	}
+}
+
+// The user's name is the one field with no fallback: amenbo names its AI out of the box and its
+// user only when they say so, so an unanswered one stays empty and the facet is said as it
+// arrived, rather than a person being called something nobody chose.
+func TestTheUsersNameIsLeftEmptyRatherThanInvented(t *testing.T) {
+	answersWith(t, `{"settings":{"language":"en","ai_display_name":"AI"}}`)
+
+	got, err := readPreferences()
+	if err != nil {
+		t.Fatalf("an answer without it is not a fault: %v", err)
+	}
+	if got.humanDisplayName != "" {
+		t.Errorf("nothing should be made up here, got %q", got.humanDisplayName)
 	}
 }

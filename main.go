@@ -36,8 +36,12 @@ import (
 // so a document announcing a different version is one this plugin must not guess at.
 const contractVersion = 1
 
-// actorAI is the one actor whose writes are reported. The other is the user themselves.
-const actorAI = "ai"
+// actorAI is the one actor whose writes are reported. actorHuman is the other, the user
+// themselves — never reported as the one who acted, but named when the AI hands work to them.
+const (
+	actorAI    = "ai"
+	actorHuman = "human"
+)
 
 // pluginName is what amenbo knows this plugin as: its manifest's name, its installed directory, and
 // the word a user types after `plugin`. One spelling, so what is written under it is found again.

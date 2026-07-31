@@ -516,7 +516,7 @@ func sentence(how preferences, in input, about subject) string {
 	said := strings.NewReplacer(
 		slotWho, how.aiDisplayName,
 		slotWhat, about.name,
-		slotState, stateWord(how.language, in.Event, in.New),
+		slotState, stateWord(how, in.Event, in.New),
 		slotEvent, in.Event,
 	).Replace(saying(how.language, in.Event, elaborated(in)))
 	if about.title == "" {
@@ -562,22 +562,60 @@ func unknownSaying(language string) string {
 	return wordings[fallbackLanguage].unknown
 }
 
-// stateWord is what goes where a sentence names the second thing.
+// stateWord is what goes where a sentence names the second thing. Two of the three arrive as a
+// value off the wire and leave as something a reader recognises; the third arrives that way and
+// stays, because it already is one.
 //
-// Only one of the three is a word amenbo owns: a status. The other two — the facet a task was
-// assigned to, the slug of the project it moved into — are the store's own values, and a channel
-// that translated them would be naming something the user cannot search for. So they pass through,
-// and a status this build does not have a word for passes through as well: the value off the wire
-// says more than nothing does.
-func stateWord(language, event, newState string) string {
-	if event != eventStatusChanged || newState == "" {
+//   - a **status** is a word amenbo owns, so it is said the way amenbo says it
+//   - an **assignee** arrives as the facet, `ai` or `human`, which names one of the two the line
+//     is already about — so it is said by the name they go by, the same one the sentence's subject
+//     is said by
+//   - a **project** arrives as its slug, which is the store's own value and the one the user would
+//     go and search for, so it passes through untouched
+func stateWord(how preferences, event, newState string) string {
+	switch {
+	case newState == "":
 		return newState
-	}
-	if word := wordings[language].statuses[newState]; word != "" {
-		return word
-	}
-	if word := wordings[fallbackLanguage].statuses[newState]; word != "" {
-		return word
+	case event == eventStatusChanged:
+		return statusWord(how.language, newState)
+	case event == eventTaskAssigned:
+		return whoseName(how, newState)
 	}
 	return newState
+}
+
+// statusWord is amenbo's own word for a state. A status this build has no word for passes through
+// as it arrived: the value off the wire says more than nothing does, so a state amenbo adds later
+// still reports.
+func statusWord(language, status string) string {
+	if word := wordings[language].statuses[status]; word != "" {
+		return word
+	}
+	if word := wordings[fallbackLanguage].statuses[status]; word != "" {
+		return word
+	}
+	return status
+}
+
+// whoseName resolves the facet a task was handed to into the name that facet goes by. This is not
+// a translation — the name it lands on is the user's own text, and travels on untouched like every
+// other thing of theirs in a line. It is the same resolution the subject of the sentence already
+// gets, and doing it in one place and not the other is what left a line calling the same party two
+// different things.
+//
+// A facet neither of the two, and a store that answered with no name at all, are said as they
+// arrived: what this reaches for is a name amenbo gave, never one made up here. The second is rare
+// on purpose — amenbo names both parties whether or not the user has chosen anything — so `human`
+// in a line means the settings could not be read, which is the same failure that costs it its
+// language.
+func whoseName(how preferences, facet string) string {
+	switch facet {
+	case actorAI:
+		return how.aiDisplayName
+	case actorHuman:
+		if how.humanDisplayName != "" {
+			return how.humanDisplayName
+		}
+	}
+	return facet
 }

@@ -95,10 +95,11 @@ func show(kind string, id int64) (ref, title string, err error) {
 	return record.Ref, record.Title, nil
 }
 
-// preferences is how a message should read: the language to say it in, and the name the AI goes
-// by. Neither is on the wire — a payload carries what happened, not how to word it — and neither
-// is a setting of this plugin's own: the user has already told amenbo both, and asking again here
-// would be the same question answered in two places, free to disagree.
+// preferences is how a message should read: the language to say it in, and the names the two who
+// act in it go by. None of it is on the wire — a payload carries what happened, not how to word
+// it — and none of it is a setting of this plugin's own: the user has already told amenbo all
+// three, and asking again here would be the same question answered in two places, free to
+// disagree.
 type preferences struct {
 	// language is amenbo's language code, e.g. "ja", passed on as it was answered. Which codes
 	// there is a wording for is the wording's business; the read does not judge the answer,
@@ -106,6 +107,12 @@ type preferences struct {
 	language string
 	// aiDisplayName is the name the AI goes by — the subject of every sentence this plugin writes.
 	aiDisplayName string
+	// humanDisplayName is the name the user goes by, which a line needs when the AI hands work
+	// over rather than does it. Unlike the AI's, it has no fallback here: amenbo already answers
+	// with a name of its own — in the language it is set to — while the user has not chosen one,
+	// so there is nothing left for this side to invent. Empty is what a store that could not be
+	// read at all leaves, and then the facet is said as it arrived.
+	humanDisplayName string
 }
 
 // defaultPreferences is how a message reads while the store has not said otherwise: English, and
@@ -113,7 +120,7 @@ type preferences struct {
 var defaultPreferences = preferences{language: fallbackLanguage, aiDisplayName: "AI"}
 
 // readPreferences reads them back — `amenbo config --json` — through the same route and the same
-// declared facet as a title.
+// declared facet as a title. All of it comes off one answer, so a name costs no read of its own.
 //
 // Read it once, where the line is worded, and carry the answer from there: it is one answer per
 // message, not one per line, and the read costs a launch of amenbo either way.
@@ -132,16 +139,18 @@ func readPreferences() (preferences, error) {
 	}
 	var record struct {
 		Settings struct {
-			Language      string `json:"language"`
-			AIDisplayName string `json:"ai_display_name"`
+			Language         string `json:"language"`
+			AIDisplayName    string `json:"ai_display_name"`
+			HumanDisplayName string `json:"human_display_name"`
 		} `json:"settings"`
 	}
 	if err := json.Unmarshal(raw, &record); err != nil {
 		return defaultPreferences, fmt.Errorf("reading back the settings: %w", err)
 	}
 	return preferences{
-		language:      orElse(record.Settings.Language, defaultPreferences.language),
-		aiDisplayName: orElse(record.Settings.AIDisplayName, defaultPreferences.aiDisplayName),
+		language:         orElse(record.Settings.Language, defaultPreferences.language),
+		aiDisplayName:    orElse(record.Settings.AIDisplayName, defaultPreferences.aiDisplayName),
+		humanDisplayName: strings.TrimSpace(record.Settings.HumanDisplayName),
 	}, nil
 }
 

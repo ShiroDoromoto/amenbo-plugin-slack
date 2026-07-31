@@ -112,18 +112,20 @@ in its place. A comment is read back by the task it hangs on rather than by itse
 belongs to a timeline nobody in the channel is looking at — and an amenbo old enough not to send
 that task falls back to naming the comment by its number.
 
-`<AI>` is the name your AI goes by, and the sentences above are the English ones — both are read
-back from amenbo too. See below.
+`<AI>` and `<who>` are the names your AI and you go by, and the sentences above are the English
+ones — all of it is read back from amenbo too. See below.
 
 ### The language a message is in
 
-A message is written in the language amenbo is set to, and its subject is the name you gave your
-AI. Neither is a setting here: you have answered both already, in **Settings** in the app, and this
-plugin reads them back rather than asking a second time.
+A message is written in the language amenbo is set to, and the two who appear in it — your AI, and
+you when it hands something over — are called what you named them. None of it is a setting here:
+you have answered all three already, in **Settings** in the app, and this plugin reads them back
+rather than asking a second time.
 
 ```sh
 amenbo config set language ja
 amenbo config set ai_name そらまめ
+amenbo config set human_name 山田
 ```
 
 ```
@@ -137,9 +139,15 @@ All nineteen languages amenbo offers are here: `de` `en` `es` `fr` `hi` `id` `it
 **What is translated is the sentence, and one word inside it.** The word is a task's status, and it
 is worded the way the app words it — a channel calling a state something amenbo does not would be
 naming something you cannot go and find. Everything else in a line is yours and arrives as you
-wrote it: the title, the ref, the name of the project a task moved into, who it was assigned to.
-So are the diagnostics in `amenbo plugin log slack` and this README — those are read by whoever is
-installing the plugin, not by the channel.
+wrote it: the title, the ref, the name of the project a task moved into. So are the diagnostics in
+`amenbo plugin log slack` and this README — those are read by whoever is installing the plugin, not
+by the channel.
+
+Who a task was **assigned** to arrives as `ai` or `human` — a contract value, not a name — so it is
+said by the name that party goes by, the same one the sentence's subject is said by. Setting a name
+is optional: until you set one, amenbo answers with a name of its own, in the language it is set
+to. A name is reached for and never invented here, so `ai` and `human` reach a line only when the
+settings could not be read at all — the same read whose failure costs the line its language.
 
 **Nothing here can cost you a notification.** A language this build has never heard of — one amenbo
 adds after this release — is reported in English, as is a status with no word yet; and settings that

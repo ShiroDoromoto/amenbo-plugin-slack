@@ -7,8 +7,8 @@ import (
 
 // english and japanese are the two stores these tests word a line from.
 var (
-	english  = preferences{language: "en", aiDisplayName: "AI"}
-	japanese = preferences{language: "ja", aiDisplayName: "さくら"}
+	english  = preferences{language: "en", aiDisplayName: "AI", humanDisplayName: "Carol"}
+	japanese = preferences{language: "ja", aiDisplayName: "さくら", humanDisplayName: "山田"}
 )
 
 // lineFor words one line the way hook does, from a payload and what it is about.
@@ -27,7 +27,7 @@ func TestSentenceSaysWhatHappened(t *testing.T) {
 		{eventTaskDone, "", "AI finished AMB-T-42 — Ship the thing"},
 		{eventTaskRejected, "", "AI decided against AMB-T-42 — Ship the thing"},
 		{eventStatusChanged, "in_progress", "AI moved AMB-T-42 to In progress — Ship the thing"},
-		{eventTaskAssigned, "ai", "AI assigned AMB-T-42 to ai — Ship the thing"},
+		{eventTaskAssigned, actorHuman, "AI assigned AMB-T-42 to Carol — Ship the thing"},
 		{eventTaskMoved, "another-project", "AI moved AMB-T-42 into another-project — Ship the thing"},
 		{eventTaskDeleted, "", "AI deleted AMB-T-42 — Ship the thing"},
 		{eventDecisionAccepted, "", "AI accepted AMB-T-42 — Ship the thing"},
@@ -52,7 +52,7 @@ func TestASentenceIsSaidInTheStoresLanguage(t *testing.T) {
 		{eventTaskDone, "", "さくら が AMB-T-42 を完了しました — Ship the thing"},
 		{eventTaskRejected, "", "さくら が AMB-T-42 をやらないと決めました — Ship the thing"},
 		{eventStatusChanged, "in_progress", "さくら が AMB-T-42 を進行中に変更しました — Ship the thing"},
-		{eventTaskAssigned, "ai", "さくら が AMB-T-42 を ai に割り当てました — Ship the thing"},
+		{eventTaskAssigned, actorHuman, "さくら が AMB-T-42 を 山田 に割り当てました — Ship the thing"},
 		{eventTaskMoved, "another-project", "さくら が AMB-T-42 を another-project へ移動しました — Ship the thing"},
 		{eventTaskDeleted, "", "さくら が AMB-T-42 を削除しました — Ship the thing"},
 		{eventDecisionAccepted, "", "さくら が AMB-T-42 を採択しました — Ship the thing"},
@@ -133,9 +133,11 @@ func TestALanguageWithNoWordingFallsBackToEnglish(t *testing.T) {
 	}
 }
 
-// A status is amenbo's own word, so a channel says what the app says. What is not amenbo's — the
-// facet a task was assigned to, the slug of the project it moved into — passes through untouched.
-func TestOnlyAStatusIsTranslated(t *testing.T) {
+// What a sentence names besides the record arrives as a value off the wire, and each of the three
+// leaves differently: a status becomes amenbo's own word, a facet becomes the name that facet goes
+// by, and a project's slug stays as it is — it is the store's own value and what the user would go
+// and search for.
+func TestWhatASentenceNamesBesidesTheRecord(t *testing.T) {
 	about := subject{name: "AMB-T-42"}
 	for _, c := range []struct {
 		how                    preferences
@@ -145,12 +147,38 @@ func TestOnlyAStatusIsTranslated(t *testing.T) {
 		{english, eventStatusChanged, "blocked", "Blocked"},
 		{japanese, eventStatusChanged, "todo", "未着手"},
 		{japanese, eventStatusChanged, "blocked", "ブロック"},
-		{japanese, eventTaskAssigned, "ai", "ai"},
+		{japanese, eventTaskAssigned, actorAI, "さくら"},
+		{japanese, eventTaskAssigned, actorHuman, "山田"},
 		{japanese, eventTaskMoved, "another-project", "another-project"},
 	} {
 		if got := lineFor(c.how, c.event, c.newState, about); !strings.Contains(got, c.state) {
 			t.Errorf("%s %q in %s: %q should carry %q", c.event, c.newState, c.how.language, got, c.state)
 		}
+	}
+}
+
+// The same party is said the same way wherever a line names them: the AI that acted and the AI a
+// task was handed to are one, so a line that spelled one of them `ai` was calling it two things.
+func TestTheOneWhoActedAndTheOneItWentToAreSaidAlike(t *testing.T) {
+	about := subject{name: "AMB-T-42"}
+
+	got := lineFor(japanese, eventTaskAssigned, actorAI, about)
+	if want := "さくら が AMB-T-42 を さくら に割り当てました"; got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+// A name is reached for, never made up. A store holding no name for its user, and a facet that is
+// neither of the two, are said the way they arrived.
+func TestAFacetWithNoNameIsSaidAsItArrived(t *testing.T) {
+	about := subject{name: "AMB-T-42"}
+	nameless := preferences{language: "en", aiDisplayName: "AI"}
+
+	if got, want := lineFor(nameless, eventTaskAssigned, actorHuman, about), "AI assigned AMB-T-42 to human"; got != want {
+		t.Errorf("a user amenbo has no name for: got %q, want %q", got, want)
+	}
+	if got, want := lineFor(english, eventTaskAssigned, "committee", about), "AI assigned AMB-T-42 to committee"; got != want {
+		t.Errorf("a facet this build does not know: got %q, want %q", got, want)
 	}
 }
 
