@@ -168,6 +168,10 @@ Only the writes an AI drove are reported: the ones you drove yourself, you were 
 Which of them reach the channel is yours to choose — by default a task created, its status
 moved, and either terminal (done or decided against).
 
+A message is written in the language amenbo is set to, and its subject is the name you gave your
+AI. Neither is a setting here — both are read back from amenbo, and a language this build has no
+wording for is reported in English.
+
 Settings:
   webhook_url   the Slack incoming webhook to post to (secret, required)
   events        what to report, from the eleven amenbo fires (defaults to the four above;

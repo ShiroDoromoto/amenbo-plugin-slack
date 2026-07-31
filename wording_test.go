@@ -178,6 +178,36 @@ func TestAnEventWithNoWordingIsStillNamed(t *testing.T) {
 	}
 }
 
+// Every language amenbo offers has a row here, spelled the way amenbo spells the code — a `pt-br`
+// where the store says `pt-BR` is a row nothing ever reads, and it would go out in English with
+// nobody able to say why.
+func TestEveryLanguageAmenboOffersHasARow(t *testing.T) {
+	offered := []string{
+		"de", "en", "es", "fr", "hi", "id", "it", "ja", "ko", "nl",
+		"pl", "pt-BR", "ru", "th", "tr", "uk", "vi", "zh-Hans", "zh-Hant",
+	}
+	for _, code := range offered {
+		if _, has := wordings[code]; !has {
+			t.Errorf("no row for %q", code)
+		}
+	}
+	if len(wordings) != len(offered) {
+		t.Errorf("got %d rows for %d languages — one of them is spelled wrong", len(wordings), len(offered))
+	}
+}
+
+// A third language, end to end, to show the row is wired and not merely present: the sentence, the
+// name the user gave their AI, and amenbo's own word for the status, with the title untouched.
+func TestAThirdLanguageIsSaidFromItsOwnRow(t *testing.T) {
+	about := subject{name: "AMB-T-42", title: "Ship the thing"}
+	german := preferences{language: "de", aiDisplayName: "Bob"}
+
+	got := lineFor(german, eventStatusChanged, "in_progress", about)
+	if want := "Bob hat AMB-T-42 auf In Arbeit gesetzt — Ship the thing"; got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
 // Every language carries every sentence and every status. English is what a gap falls back to, so a
 // gap would not show as a blank message — it would show as one language quietly said in another,
 // which is exactly the kind of thing a test has to catch rather than a reader.

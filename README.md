@@ -94,23 +94,57 @@ Every event amenbo fires is on offer, and each one has its own sentence — one 
 
 | Event | The message |
 |---|---|
-| **`task.created`** | `AI created <task>` |
-| **`task.status_changed`** | `AI moved <task> to <status>` |
-| **`task.done`** | `AI finished <task>` |
-| **`task.rejected`** | `AI decided against <task>` |
-| `task.assigned` | `AI assigned <task> to <who>` |
-| `task.moved` | `AI moved <task> into <project>` |
-| `task.deleted` | `AI deleted <task>` |
-| `decision.accepted` | `AI accepted <decision>` |
-| `decision.rejected` | `AI rejected <decision>` |
-| `comment.added` | `AI added a comment on <task>` |
-| `comment.removed` | `AI took back a comment on <task>` |
+| **`task.created`** | `<AI> created <task>` |
+| **`task.status_changed`** | `<AI> moved <task> to <status>` |
+| **`task.done`** | `<AI> finished <task>` |
+| **`task.rejected`** | `<AI> decided against <task>` |
+| `task.assigned` | `<AI> assigned <task> to <who>` |
+| `task.moved` | `<AI> moved <task> into <project>` |
+| `task.deleted` | `<AI> deleted <task>` |
+| `decision.accepted` | `<AI> accepted <decision>` |
+| `decision.rejected` | `<AI> rejected <decision>` |
+| `comment.added` | `<AI> added a comment on <task>` |
+| `comment.removed` | `<AI> took back a comment on <task>` |
 
 `<task>` and `<decision>` are the record's ref and its title, read back from the store. One of them
 cannot be: a **deleted** task is gone, so its title comes off the vanished record the event carries
 in its place. A comment is read back by the task it hangs on rather than by itself — its own number
 belongs to a timeline nobody in the channel is looking at — and an amenbo old enough not to send
 that task falls back to naming the comment by its number.
+
+`<AI>` is the name your AI goes by, and the sentences above are the English ones — both are read
+back from amenbo too. See below.
+
+### The language a message is in
+
+A message is written in the language amenbo is set to, and its subject is the name you gave your
+AI. Neither is a setting here: you have answered both already, in **Settings** in the app, and this
+plugin reads them back rather than asking a second time.
+
+```sh
+amenbo config set language ja
+amenbo config set ai_name そらまめ
+```
+
+```
+*amenbo-plugin-slack*
+そらまめ が AMB-T-42 を完了しました — Ship the thing
+```
+
+All nineteen languages amenbo offers are here: `de` `en` `es` `fr` `hi` `id` `it` `ja` `ko` `nl`
+`pl` `pt-BR` `ru` `th` `tr` `uk` `vi` `zh-Hans` `zh-Hant`.
+
+**What is translated is the sentence, and one word inside it.** The word is a task's status, and it
+is worded the way the app words it — a channel calling a state something amenbo does not would be
+naming something you cannot go and find. Everything else in a line is yours and arrives as you
+wrote it: the title, the ref, the name of the project a task moved into, who it was assigned to.
+So are the diagnostics in `amenbo plugin log slack` and this README — those are read by whoever is
+installing the plugin, not by the channel.
+
+**Nothing here can cost you a notification.** A language this build has never heard of — one amenbo
+adds after this release — is reported in English, as is a status with no word yet; and settings that
+could not be read at all cost a line its language and nothing else, the message still going out with
+the run ending non-zero so the reason is in the log.
 
 ### A burst arrives as one message
 
@@ -181,12 +215,13 @@ answered.
 a plugin ignores what it does not recognise; `v` moves only when an existing field's meaning
 breaks — which is why a document announcing another version is dropped rather than guessed at.
 
-**A payload names a record and carries none of it.** So the title in a message is read back,
-and the way to read is the one every author already has:
+**A payload names a record and carries none of it**, and it says nothing about how to word what it
+names. So both are read back, and the way to read is the one every author already has:
 
 ```sh
 amenbo task show 42 --json --actor ai
 amenbo project show AMB-P-1 --json --actor ai    # the heading, on the run that sends
+amenbo config --json --actor ai                  # the language and the AI's name, per line worded
 ```
 
 amenbo names the store to open and the window to read it through in the environment, because
@@ -197,10 +232,11 @@ settled. See [`amenbo.go`](amenbo.go).
 
 **A message goes out for every event it takes.** The send and the reads are not the same
 failure: a webhook that will not take the message means nothing was reported, while a title
-that could not be read back costs the message its title and nothing else — and a project that
-could not be read costs it the heading. So a message that lost either still goes out, naming the
-task by its number, and the run still ends non-zero so the fault lands in the log instead of
-quietly shortening every message from then on.
+that could not be read back costs the message its title and nothing else — settings that could not
+be read cost it the language, and a project that could not be read costs it the heading. So a
+message that lost any of them still goes out, naming the task by its number and worded in English,
+and the run still ends non-zero so the fault lands in the log instead of quietly shortening every
+message from then on.
 
 **An event delivered twice is reported once.** A runner that died after this plugin took an event in,
 but before amenbo could take that row off the queue, delivers it again — and nobody reading the
