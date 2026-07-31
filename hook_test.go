@@ -40,13 +40,22 @@ func slackStands(t *testing.T) *[]string {
 	return &posted
 }
 
-// readsBack stands in for amenbo, answering a `show --json` on any record with one ref and title.
+// englishStore is a store whose user reads in English and left their AI named as it comes. Every
+// message expected below is worded from it, so the English in them is the store's answer rather
+// than something this plugin decided.
+const englishStore = `{"settings":{"language":"en","ai_display_name":"AI"}}`
+
+// readsBack stands in for amenbo, answering a `show --json` on any record with one ref and title,
+// and the settings with the English store above.
 func readsBack(t *testing.T, ref, title string) *[]string {
 	t.Helper()
 	var asked []string
 	previous := runAmenbo
 	runAmenbo = func(args ...string) ([]byte, error) {
 		asked = append(asked, strings.Join(args, " "))
+		if len(args) > 0 && args[0] == "config" {
+			return []byte(englishStore), nil
+		}
 		return []byte(fmt.Sprintf(`{"ref":%q,"title":%q,"status":"done"}`, ref, title)), nil
 	}
 	t.Cleanup(func() { runAmenbo = previous })
@@ -54,20 +63,35 @@ func readsBack(t *testing.T, ref, title string) *[]string {
 }
 
 // namesTheProject stands in for an amenbo that answers `project show` with a name, and every other
-// read with one ref and title.
+// read the way readsBack does.
 func namesTheProject(t *testing.T, name string) *[]string {
 	t.Helper()
 	var asked []string
 	previous := runAmenbo
 	runAmenbo = func(args ...string) ([]byte, error) {
 		asked = append(asked, strings.Join(args, " "))
-		if len(args) > 0 && args[0] == "project" {
+		switch {
+		case len(args) > 0 && args[0] == "project":
 			return []byte(fmt.Sprintf(`{"name":%q}`, name)), nil
+		case len(args) > 0 && args[0] == "config":
+			return []byte(englishStore), nil
 		}
 		return []byte(`{"ref":"AMB-T-42","title":"Ship the thing"}`), nil
 	}
 	t.Cleanup(func() { runAmenbo = previous })
 	return &asked
+}
+
+// records is the reads a message's *content* came from — the records it names. The settings behind
+// its wording are read on every line and are their own tests' business, so they are left out here.
+func records(asked *[]string) []string {
+	var kept []string
+	for _, one := range *asked {
+		if !strings.HasPrefix(one, "config ") {
+			kept = append(kept, one)
+		}
+	}
+	return kept
 }
 
 // refusesToRead stands in for an amenbo that would not answer.
@@ -94,33 +118,71 @@ func TestHookSendsOneMessagePerEvent(t *testing.T) {
 	if (*posted)[0] != "AI finished AMB-T-42 — Ship the thing" {
 		t.Errorf("unexpected message: %q", (*posted)[0])
 	}
-	if len(*asked) != 1 || (*asked)[0] != "task show 42 --json --actor ai" {
-		t.Errorf("unexpected read back: %v", *asked)
+	if read := records(asked); len(read) != 1 || read[0] != "task show 42 --json --actor ai" {
+		t.Errorf("unexpected read back: %v", read)
 	}
 }
 
-// Every event in the catalog has its own sentence, and the ones amenbo hands a new state spend it.
-// The title trails all of them.
-func TestSentenceSaysWhatHappened(t *testing.T) {
-	about := subject{name: "AMB-T-42", title: "Ship the thing"}
-	for _, c := range []struct {
-		event, newState, want string
-	}{
-		{eventTaskCreated, "", "AI created AMB-T-42 — Ship the thing"},
-		{eventTaskDone, "", "AI finished AMB-T-42 — Ship the thing"},
-		{eventTaskRejected, "", "AI decided against AMB-T-42 — Ship the thing"},
-		{eventStatusChanged, "in_progress", "AI moved AMB-T-42 to in_progress — Ship the thing"},
-		{eventTaskAssigned, "ai", "AI assigned AMB-T-42 to ai — Ship the thing"},
-		{eventTaskMoved, "another-project", "AI moved AMB-T-42 into another-project — Ship the thing"},
-		{eventTaskDeleted, "", "AI deleted AMB-T-42 — Ship the thing"},
-		{eventDecisionAccepted, "", "AI accepted AMB-T-42 — Ship the thing"},
-		{eventDecisionRejected, "", "AI rejected AMB-T-42 — Ship the thing"},
-		{eventCommentAdded, "", "AI added AMB-T-42 — Ship the thing"},
-		{eventCommentRemoved, "", "AI took back AMB-T-42 — Ship the thing"},
-	} {
-		if got := sentence(c.event, c.newState, about); got != c.want {
-			t.Errorf("%s: got %q, want %q", c.event, got, c.want)
+// readsBackInJapanese is an amenbo whose user reads in Japanese and named their AI.
+func readsBackInJapanese(t *testing.T) *[]string {
+	t.Helper()
+	var asked []string
+	previous := runAmenbo
+	runAmenbo = func(args ...string) ([]byte, error) {
+		asked = append(asked, strings.Join(args, " "))
+		if len(args) > 0 && args[0] == "config" {
+			return []byte(`{"settings":{"language":"ja","ai_display_name":"さくら"}}`), nil
 		}
+		return []byte(`{"ref":"AMB-T-42","title":"Ship the thing"}`), nil
+	}
+	t.Cleanup(func() { runAmenbo = previous })
+	return &asked
+}
+
+// A message is worded in the language the store is read in, and its subject is the name the user
+// gave their AI. The title stays as it was written — it is theirs, not this plugin's to translate.
+func TestAMessageIsWordedTheWayTheStoreIsRead(t *testing.T) {
+	posted := slackStands(t)
+	asked := readsBackInJapanese(t)
+
+	if err := hook(aiWrite(eventTaskDone)); err != nil {
+		t.Fatal(err)
+	}
+
+	if len(*posted) != 1 || (*posted)[0] != "さくら が AMB-T-42 を完了しました — Ship the thing" {
+		t.Fatalf("unexpected message: %v", *posted)
+	}
+	if read := strings.Join(*asked, "\n"); !strings.Contains(read, "config --json --actor ai") {
+		t.Errorf("the wording should be read back under a declared facet: %q", read)
+	}
+}
+
+// The settings are read where a line is worded, and only there: a launch that has nothing to add —
+// one whose event was already taken in — words nothing, so it asks nothing, even when it is the
+// launch that sends.
+func TestTheWordingIsReadWhereALineIsWorded(t *testing.T) {
+	remembers(t)
+	slackStands(t)
+	asked := readsBackInJapanese(t)
+
+	behind(t, 1)
+	twice := moment(eventTaskDone, "2026-07-22T09:00:00Z")
+	if err := hook(twice); err != nil {
+		t.Fatal(err)
+	}
+	behind(t, 0)
+	if err := hook(twice); err != nil {
+		t.Fatal(err)
+	}
+
+	reads := 0
+	for _, args := range *asked {
+		if strings.HasPrefix(args, "config ") {
+			reads++
+		}
+	}
+	if reads != 1 {
+		t.Errorf("one line worded is one read, got %d: %v", reads, *asked)
 	}
 }
 
@@ -139,8 +201,8 @@ func TestHookNamesADeletedTaskFromTheVanishedRecord(t *testing.T) {
 	if len(*posted) != 1 || (*posted)[0] != "AI deleted task #42 — Ship the thing" {
 		t.Fatalf("unexpected message: %v", *posted)
 	}
-	if len(*asked) != 0 {
-		t.Errorf("there is nothing left to read back: %v", *asked)
+	if read := records(asked); len(read) != 0 {
+		t.Errorf("there is nothing left to read back: %v", read)
 	}
 }
 
@@ -160,8 +222,8 @@ func TestHookNamesTheTaskARemovedCommentHungOn(t *testing.T) {
 	if len(*posted) != 1 || (*posted)[0] != "AI took back a comment on AMB-T-7 — Ship the thing" {
 		t.Fatalf("unexpected message: %v", *posted)
 	}
-	if len(*asked) != 1 || !strings.HasPrefix((*asked)[0], "task show 7 ") {
-		t.Errorf("the parent is what gets read: %v", *asked)
+	if read := records(asked); len(read) != 1 || !strings.HasPrefix(read[0], "task show 7 ") {
+		t.Errorf("the parent is what gets read: %v", read)
 	}
 }
 
@@ -181,8 +243,8 @@ func TestHookNamesTheTaskAnAddedCommentHangsOn(t *testing.T) {
 	if len(*posted) != 1 || (*posted)[0] != "AI added a comment on AMB-T-7 — Ship the thing" {
 		t.Fatalf("unexpected message: %v", *posted)
 	}
-	if len(*asked) != 1 || !strings.HasPrefix((*asked)[0], "task show 7 ") {
-		t.Errorf("the parent is what gets read: %v", *asked)
+	if read := records(asked); len(read) != 1 || !strings.HasPrefix(read[0], "task show 7 ") {
+		t.Errorf("the parent is what gets read: %v", read)
 	}
 }
 
@@ -200,8 +262,8 @@ func TestHookFallsBackToTheNumberWhenNoParentArrives(t *testing.T) {
 	if len(*posted) != 1 || (*posted)[0] != "AI added comment #42" {
 		t.Fatalf("unexpected message: %v", *posted)
 	}
-	if len(*asked) != 0 {
-		t.Errorf("there is nothing to read a comment back with: %v", *asked)
+	if read := records(asked); len(read) != 0 {
+		t.Errorf("there is nothing to read a comment back with: %v", read)
 	}
 }
 
@@ -217,8 +279,8 @@ func TestHookReadsADecisionBackAsADecision(t *testing.T) {
 	if len(*posted) != 1 || (*posted)[0] != "AI accepted AMB-D-42 — Report only the AI's writes" {
 		t.Fatalf("unexpected message: %v", *posted)
 	}
-	if len(*asked) != 1 || !strings.HasPrefix((*asked)[0], "decision show 42 ") {
-		t.Errorf("a decision is not read back as a task: %v", *asked)
+	if read := records(asked); len(read) != 1 || !strings.HasPrefix(read[0], "decision show 42 ") {
+		t.Errorf("a decision is not read back as a task: %v", read)
 	}
 }
 

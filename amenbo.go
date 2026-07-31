@@ -110,7 +110,7 @@ type preferences struct {
 
 // defaultPreferences is how a message reads while the store has not said otherwise: English, and
 // the AI named the way amenbo names it out of the box.
-var defaultPreferences = preferences{language: "en", aiDisplayName: "AI"}
+var defaultPreferences = preferences{language: fallbackLanguage, aiDisplayName: "AI"}
 
 // readPreferences reads them back — `amenbo config --json` — through the same route and the same
 // declared facet as a title.

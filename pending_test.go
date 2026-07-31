@@ -49,7 +49,7 @@ func TestHookHoldsALineWhileTheQueueIsBehindIt(t *testing.T) {
 	}
 	want := strings.Join([]string{
 		"AI created AMB-T-42 — Ship the thing",
-		"AI moved AMB-T-42 to in_progress — Ship the thing",
+		"AI moved AMB-T-42 to In progress — Ship the thing",
 		"AI finished AMB-T-42 — Ship the thing",
 	}, "\n")
 	if (*posted)[0] != want {

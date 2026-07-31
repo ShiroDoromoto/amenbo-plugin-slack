@@ -67,15 +67,16 @@ const eventsSetting = "events"
 //
 // What can go wrong is the send, and the reads behind it. The two are not the same failure: a webhook
 // that will not take the message means nothing was reported — and what was owed stays owed, so the
-// next flush carries it — while a record that could not be read back costs one line its title, and a
-// project that could not be read costs the message its heading. So the message goes out either way,
-// carrying what was readable, and the run still ends non-zero so the fault lands in the execution
-// log instead of quietly shortening every message from here on.
+// next flush carries it — while a record that could not be read back costs one line its title, the
+// settings that could not be read cost it the user's language, and a project that could not be read
+// costs the message its heading. So the message goes out either way, carrying what was readable, and
+// the run still ends non-zero so the fault lands in the execution log instead of quietly shortening
+// every message from here on.
 func hook(in input) error {
 	// State is kept per project now; a run under the split leaves nothing of the older shape behind.
 	dropLegacy()
 	batch := held()
-	var readErr, holdErr, takeErr error
+	var readErr, wordErr, holdErr, takeErr error
 
 	if reportable(in) {
 		taken := recall()
@@ -85,7 +86,12 @@ func hook(in input) error {
 		if !taken.holds(key) {
 			var about subject
 			about, readErr = describe(in)
-			batch.add(sentence(in.Event, in.New, about))
+			// How the line reads is read here, where it is worded — once, for the one line
+			// this launch can add. A line goes out in whatever language was set when it was
+			// taken in, which is the moment it describes.
+			var how preferences
+			how, wordErr = readPreferences()
+			batch.add(sentence(how, in, about))
 			// Nothing from here on may stop the send. A store that cannot be written is a
 			// fault worth a failed run, but holding a line back on account of it would mean
 			// carrying it in a process that is about to end — so the batching is what gives
@@ -104,7 +110,7 @@ func hook(in input) error {
 		return firstFault(holdErr, takeErr)
 	}
 	if batch.durable() && remaining() > 0 {
-		return firstFault(takeErr, readFailure(readErr))
+		return firstFault(takeErr, readFailure(readErr), readFailure(wordErr))
 	}
 
 	webhook := os.Getenv(webhookEnv)
@@ -118,7 +124,7 @@ func hook(in input) error {
 		return err
 	}
 	clearErr := batch.clear()
-	return firstFault(holdErr, takeErr, clearErr, readFailure(readErr), readFailure(headErr))
+	return firstFault(holdErr, takeErr, clearErr, readFailure(readErr), readFailure(wordErr), readFailure(headErr))
 }
 
 // heading is the line a message leads with: the project it came from, in bold.
@@ -236,29 +242,28 @@ func describe(in input) (subject, error) {
 	case eventDecisionAccepted, eventDecisionRejected:
 		ref, title, err := decisionShow(in.ID)
 		return named(fmt.Sprintf("decision #%d", in.ID), ref, title), err
-	case eventCommentAdded:
-		return commentOn(in, fmt.Sprintf("comment #%d", in.ID))
-	case eventCommentRemoved:
-		return commentOn(in, fmt.Sprintf("a comment (#%d)", in.ID))
+	case eventCommentAdded, eventCommentRemoved:
+		return commentOn(in)
 	default:
 		ref, title, err := taskShow(in.ID)
 		return named(fmt.Sprintf("task #%d", in.ID), ref, title), err
 	}
 }
 
-// commentOn names a comment by the task it hangs on, which is the only end of it a reader can
-// pick up: the comment's own number belongs to a timeline they are not looking at.
+// commentOn names the task a comment hangs on, which is the only end of it a reader can pick up:
+// the comment's own number belongs to a timeline they are not looking at. That the line is about a
+// comment is the sentence's to say, not the name's — a language that puts it another way needs the
+// task on its own, not wrapped in an English phrase.
 //
 // The parent is a field that was added to the payload rather than one whose meaning changed, so
 // an amenbo old enough to send none is not a version to refuse over — it is a payload with less
 // in it, and the message falls back to naming the comment by its number, which is all there is.
-func commentOn(in input, fallback string) (subject, error) {
+func commentOn(in input) (subject, error) {
 	if in.Parent == nil {
-		return subject{name: fallback}, nil
+		return subject{name: fmt.Sprintf("comment #%d", in.ID)}, nil
 	}
 	ref, title, err := taskShow(*in.Parent)
-	on := named(fmt.Sprintf("task #%d", *in.Parent), ref, title)
-	return subject{name: "a comment on " + on.name, title: on.title}, err
+	return named(fmt.Sprintf("task #%d", *in.Parent), ref, title), err
 }
 
 // named is how a record read back is pointed at: its ref and title where the read answered, and
@@ -269,52 +274,4 @@ func named(fallback, ref, title string) subject {
 		return subject{name: fallback}
 	}
 	return subject{name: ref, title: title}
-}
-
-// sentence is the message: what the AI did, to which record.
-func sentence(event, newState string, about subject) string {
-	var said string
-	switch event {
-	case eventTaskCreated:
-		said = "AI created " + about.name
-	case eventTaskDone:
-		said = "AI finished " + about.name
-	case eventTaskRejected:
-		said = "AI decided against " + about.name
-	case eventStatusChanged:
-		said = "AI moved " + about.name
-		if newState != "" {
-			said += " to " + newState
-		}
-	case eventTaskAssigned:
-		said = "AI assigned " + about.name
-		if newState != "" {
-			said += " to " + newState
-		}
-	case eventTaskMoved:
-		said = "AI moved " + about.name
-		if newState != "" {
-			said += " into " + newState
-		} else {
-			said += " to another project"
-		}
-	case eventTaskDeleted:
-		said = "AI deleted " + about.name
-	case eventDecisionAccepted:
-		said = "AI accepted " + about.name
-	case eventDecisionRejected:
-		said = "AI rejected " + about.name
-	case eventCommentAdded:
-		said = "AI added " + about.name
-	case eventCommentRemoved:
-		said = "AI took back " + about.name
-	default:
-		// Out of reach through hook, which filters on the catalog first. Naming the event is
-		// still better than an empty message for a caller that hands over a twelfth one.
-		said = "AI acted on " + about.name + " (" + event + ")"
-	}
-	if about.title == "" {
-		return said
-	}
-	return said + " — " + about.title
 }

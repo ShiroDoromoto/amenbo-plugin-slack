@@ -5,7 +5,7 @@ Report to a Slack channel what your AI did in a project while you were away from
 ```
 *amenbo-plugin-slack*
 AI created AMB-T-42 — Ship the thing
-AI moved AMB-T-42 to in_progress — Ship the thing
+AI moved AMB-T-42 to In progress — Ship the thing
 AI finished AMB-T-42 — Ship the thing
 ```
 
@@ -121,7 +121,7 @@ that sees nothing behind it sends everything waiting as one message:
 ```
 *amenbo-plugin-slack*
 AI created AMB-T-42 — Ship the thing
-AI moved AMB-T-42 to in_progress — Ship the thing
+AI moved AMB-T-42 to In progress — Ship the thing
 AI finished AMB-T-42 — Ship the thing
 ```
 
