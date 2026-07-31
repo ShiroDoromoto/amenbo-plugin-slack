@@ -53,6 +53,24 @@ func decisionShow(id int64) (ref, title string, err error) {
 	return show("decision", id)
 }
 
+// projectShow reads back the name of the project a run reaches. It is named by the ref amenbo hands
+// over rather than by a number, and it is the one read here that is not about a record the payload
+// carried: what it answers is who the message is from.
+func projectShow(reach string) (name string, err error) {
+	args := append([]string{"project", "show", reach, "--json"}, actorFlag...)
+	raw, err := runAmenbo(args...)
+	if err != nil {
+		return "", err
+	}
+	var record struct {
+		Name string `json:"name"`
+	}
+	if err := json.Unmarshal(raw, &record); err != nil {
+		return "", fmt.Errorf("reading back project %s: %w", reach, err)
+	}
+	return record.Name, nil
+}
+
 // show reads one record back — `amenbo <kind> show <id> --json` — and takes the two fields a
 // message is built from. A task and a decision answer with the same two names, so one reader
 // covers both.

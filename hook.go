@@ -65,12 +65,12 @@ const eventsSetting = "events"
 // be hours away or never (found on a real store: four creations followed by four deletions nobody
 // subscribed to, and three lines stranded).
 //
-// What can go wrong is the send, and the read behind it. The two are not the same failure: a webhook
+// What can go wrong is the send, and the reads behind it. The two are not the same failure: a webhook
 // that will not take the message means nothing was reported — and what was owed stays owed, so the
-// next flush carries it — while a record that could not be read back costs one line its title and
-// nothing else. So the message goes out either way, carrying what was readable, and the run still
-// ends non-zero so the fault lands in the execution log instead of quietly shortening every message
-// from here on.
+// next flush carries it — while a record that could not be read back costs one line its title, and a
+// project that could not be read costs the message its heading. So the message goes out either way,
+// carrying what was readable, and the run still ends non-zero so the fault lands in the execution
+// log instead of quietly shortening every message from here on.
 func hook(in input) error {
 	// State is kept per project now; a run under the split leaves nothing of the older shape behind.
 	dropLegacy()
@@ -113,11 +113,42 @@ func hook(in input) error {
 		// here means the value was taken away from underneath a gate that is already open.
 		return fmt.Errorf("no webhook to post to — set it with 'amenbo plugin config set slack webhook_url <url>'")
 	}
-	if err := post(webhook, batch.text()); err != nil {
+	head, headErr := heading()
+	if err := post(webhook, head+batch.text()); err != nil {
 		return err
 	}
 	clearErr := batch.clear()
-	return firstFault(holdErr, takeErr, clearErr, readFailure(readErr))
+	return firstFault(holdErr, takeErr, clearErr, readFailure(readErr), readFailure(headErr))
+}
+
+// heading is the line a message leads with: the project it came from, in bold.
+//
+//	*amenbo-plugin-slack*
+//	AI created AMB-T-42 — Ship the thing
+//
+// A webhook belongs to a project, so a channel used to be the answer to which project a line is
+// about. It stops being one the moment two projects are pointed at the same channel, and it was
+// never one in a notification preview. The name is said once at the top rather than on every line,
+// because every line in a batch is from the same project — the state they were held in is that
+// project's.
+//
+// It is read when a message is sent, not when a line is taken in: a launch that only holds a line
+// has nothing to head, and reading then would spend a read per event to say one thing per message.
+//
+// Two answers are not a heading and are not a fault either: a launch with no project named is a run
+// by hand, and a project that answers with no name has nothing to put there. A read that failed is
+// a fault — but it costs the message its heading and nothing else, the same way a title that could
+// not be read costs one line its title.
+func heading() (string, error) {
+	reach := strings.TrimSpace(os.Getenv(reachEnv))
+	if reach == "" {
+		return "", nil
+	}
+	name, err := projectShow(reach)
+	if err != nil || name == "" {
+		return "", err
+	}
+	return "*" + name + "*\n", nil
 }
 
 // reportable says whether this event becomes a line: one this plugin can read, driven by the AI, and

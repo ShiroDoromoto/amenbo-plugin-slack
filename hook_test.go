@@ -53,6 +53,23 @@ func readsBack(t *testing.T, ref, title string) *[]string {
 	return &asked
 }
 
+// namesTheProject stands in for an amenbo that answers `project show` with a name, and every other
+// read with one ref and title.
+func namesTheProject(t *testing.T, name string) *[]string {
+	t.Helper()
+	var asked []string
+	previous := runAmenbo
+	runAmenbo = func(args ...string) ([]byte, error) {
+		asked = append(asked, strings.Join(args, " "))
+		if len(args) > 0 && args[0] == "project" {
+			return []byte(fmt.Sprintf(`{"name":%q}`, name)), nil
+		}
+		return []byte(`{"ref":"AMB-T-42","title":"Ship the thing"}`), nil
+	}
+	t.Cleanup(func() { runAmenbo = previous })
+	return &asked
+}
+
 // refusesToRead stands in for an amenbo that would not answer.
 func refusesToRead(t *testing.T, because string) {
 	t.Helper()
@@ -333,5 +350,102 @@ func TestHookFailsWithoutAWebhook(t *testing.T) {
 
 	if err == nil || !strings.Contains(err.Error(), "webhook_url") {
 		t.Errorf("the failure should name the setting to fill in, got %v", err)
+	}
+}
+
+// A message says which project it is about, once, at the top. The channel used to be that answer,
+// and stops being one as soon as two projects report into the same room.
+func TestAMessageLeadsWithTheProjectItCameFrom(t *testing.T) {
+	posted := slackStands(t)
+	asked := namesTheProject(t, "Ship the thing, the project")
+	t.Setenv(reachEnv, "AMB-P-9")
+
+	if err := hook(aiWrite(eventTaskDone)); err != nil {
+		t.Fatal(err)
+	}
+
+	want := "*Ship the thing, the project*\nAI finished AMB-T-42 — Ship the thing"
+	if len(*posted) != 1 || (*posted)[0] != want {
+		t.Fatalf("the message should lead with the project, got %v", *posted)
+	}
+	if read := strings.Join(*asked, "\n"); !strings.Contains(read, "project show AMB-P-9 --json --actor ai") {
+		t.Errorf("the project should be read back by the ref amenbo handed over: %q", read)
+	}
+}
+
+// The heading belongs to the message, not to the line: a batch is read for once, on the run that
+// sends it, rather than once per event taken in.
+func TestTheProjectIsReadOnceForAWholeBatch(t *testing.T) {
+	remembers(t)
+	posted := slackStands(t)
+	asked := namesTheProject(t, "Work")
+
+	behind(t, 2)
+	if err := hook(moment(eventTaskCreated, "2026-07-22T09:00:00Z")); err != nil {
+		t.Fatal(err)
+	}
+	behind(t, 1)
+	if err := hook(moment(eventTaskDone, "2026-07-22T09:00:01Z")); err != nil {
+		t.Fatal(err)
+	}
+	behind(t, 0)
+	if err := hook(moment(eventTaskRejected, "2026-07-22T09:00:02Z")); err != nil {
+		t.Fatal(err)
+	}
+
+	if len(*posted) != 1 {
+		t.Fatalf("the burst should arrive as one message, got %v", *posted)
+	}
+	if headings := strings.Count((*posted)[0], "*Work*"); headings != 1 {
+		t.Errorf("one message carries one heading, got %d: %q", headings, (*posted)[0])
+	}
+	reads := 0
+	for _, args := range *asked {
+		if strings.HasPrefix(args, "project show") {
+			reads++
+		}
+	}
+	if reads != 1 {
+		t.Errorf("the project should be read on the flush alone, got %d reads", reads)
+	}
+}
+
+// A project that could not be read costs the message its heading and nothing else — the same trade
+// as a title that could not be read. The run ends non-zero so the reason reaches the execution log.
+func TestAMessageGoesOutWithoutAHeadingItCouldNotRead(t *testing.T) {
+	posted := slackStands(t)
+	t.Setenv(reachEnv, "AMB-P-9")
+	previous := runAmenbo
+	runAmenbo = func(args ...string) ([]byte, error) {
+		if len(args) > 0 && args[0] == "project" {
+			return nil, fmt.Errorf("out_of_reach")
+		}
+		return []byte(`{"ref":"AMB-T-42","title":"Ship the thing"}`), nil
+	}
+	t.Cleanup(func() { runAmenbo = previous })
+
+	err := hook(aiWrite(eventTaskDone))
+
+	if len(*posted) != 1 || (*posted)[0] != "AI finished AMB-T-42 — Ship the thing" {
+		t.Fatalf("the message should go out without its heading, got %v", *posted)
+	}
+	if err == nil || !strings.Contains(err.Error(), "out_of_reach") {
+		t.Errorf("the run should end on the read that failed, got %v", err)
+	}
+}
+
+// A run nothing named a project for — one by hand — has no name to fail to read, so it sends what it
+// has and ends cleanly.
+func TestARunWithNoProjectNamedSendsNoHeading(t *testing.T) {
+	posted := slackStands(t)
+	readsBack(t, "AMB-T-42", "Ship the thing")
+	t.Setenv(reachEnv, "")
+
+	if err := hook(aiWrite(eventTaskDone)); err != nil {
+		t.Fatal(err)
+	}
+
+	if len(*posted) != 1 || (*posted)[0] != "AI finished AMB-T-42 — Ship the thing" {
+		t.Errorf("nothing should be put at the top, got %v", *posted)
 	}
 }

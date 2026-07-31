@@ -3,6 +3,7 @@
 Report to a Slack channel what your AI did in a project while you were away from it.
 
 ```
+*amenbo-plugin-slack*
 AI created AMB-T-42 — Ship the thing
 AI moved AMB-T-42 to in_progress — Ship the thing
 AI finished AMB-T-42 — Ship the thing
@@ -15,7 +16,9 @@ Three things decide what arrives.
   notification is the work that happened while nobody was watching it.
 - **The channel is the setting.** `webhook_url` is a secret setting, and a setting belongs to a
   project, so the value itself is which channel a project reports to. Point two projects at two
-  webhooks and they report to two channels; there is no channel name anywhere in the plugin.
+  webhooks and they report to two channels; there is no channel name anywhere in the plugin. And
+  every message says which project it came from, so pointing two of them at one channel still
+  reads.
 - **Which events, you choose.** `events` is a list you tick, from everything amenbo fires. Its
   default is the four above, and both the choice and the channel are answered per project.
 
@@ -67,6 +70,23 @@ the lines a burst is holding and the record of what has already been taken in ar
 project they came from — otherwise the run that flushed a batch would post whatever was waiting into
 whichever channel it happened to be launched for.
 
+### Which project a message came from
+
+Every message leads with the project's name, in bold:
+
+```
+*amenbo-plugin-slack*
+AI created AMB-T-42 — Ship the thing
+```
+
+The name is the one amenbo holds for the project the plugin was launched for — not a folder name and
+not a guess — and it is read at the moment of sending: once for the message, rather than once for
+every line, since every line in a batch comes from the same project. It is said at the top for the
+same reason: repeating it down the left of a batch would say nothing the first line has not.
+
+A name that cannot be read costs the message its heading and nothing else: the message still goes
+out, and the run ends non-zero so the reason is in `amenbo plugin log slack`.
+
 ### What can be reported
 
 Every event amenbo fires is on offer, and each one has its own sentence — one line. The four in
@@ -99,6 +119,7 @@ was one act. So a line waits while amenbo says anything is still queued for this
 that sees nothing behind it sends everything waiting as one message:
 
 ```
+*amenbo-plugin-slack*
 AI created AMB-T-42 — Ship the thing
 AI moved AMB-T-42 to in_progress — Ship the thing
 AI finished AMB-T-42 — Ship the thing
@@ -165,6 +186,7 @@ and the way to read is the one every author already has:
 
 ```sh
 amenbo task show 42 --json --actor ai
+amenbo project show AMB-P-1 --json --actor ai    # the heading, on the run that sends
 ```
 
 amenbo names the store to open and the window to read it through in the environment, because
@@ -173,11 +195,12 @@ adds nothing of its own. The facet is declared because every operation that uses
 it; what it would otherwise settle — how far the reader reaches — the window has already
 settled. See [`amenbo.go`](amenbo.go).
 
-**A message goes out for every event it takes.** The send and the read are not the same
+**A message goes out for every event it takes.** The send and the reads are not the same
 failure: a webhook that will not take the message means nothing was reported, while a title
-that could not be read back costs the message its title and nothing else. So a message that
-lost its title still goes out, naming the task by its number, and the run still ends non-zero
-so the fault lands in the log instead of quietly shortening every message from then on.
+that could not be read back costs the message its title and nothing else — and a project that
+could not be read costs it the heading. So a message that lost either still goes out, naming the
+task by its number, and the run still ends non-zero so the fault lands in the log instead of
+quietly shortening every message from then on.
 
 **An event delivered twice is reported once.** A runner that died after this plugin took an event in,
 but before amenbo could take that row off the queue, delivers it again — and nobody reading the
