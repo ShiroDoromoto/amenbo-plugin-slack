@@ -94,3 +94,61 @@ func show(kind string, id int64) (ref, title string, err error) {
 	}
 	return record.Ref, record.Title, nil
 }
+
+// preferences is how a message should read: the language to say it in, and the name the AI goes
+// by. Neither is on the wire — a payload carries what happened, not how to word it — and neither
+// is a setting of this plugin's own: the user has already told amenbo both, and asking again here
+// would be the same question answered in two places, free to disagree.
+type preferences struct {
+	// language is amenbo's language code, e.g. "ja", passed on as it was answered. Which codes
+	// there is a wording for is the wording's business; the read does not judge the answer,
+	// so a language amenbo adds later arrives here rather than being refused on the way in.
+	language string
+	// aiDisplayName is the name the AI goes by — the subject of every sentence this plugin writes.
+	aiDisplayName string
+}
+
+// defaultPreferences is how a message reads while the store has not said otherwise: English, and
+// the AI named the way amenbo names it out of the box.
+var defaultPreferences = preferences{language: "en", aiDisplayName: "AI"}
+
+// readPreferences reads them back — `amenbo config --json` — through the same route and the same
+// declared facet as a title.
+//
+// Read it once, where the line is worded, and carry the answer from there: it is one answer per
+// message, not one per line, and the read costs a launch of amenbo either way.
+//
+// A failure is a fault the run can log, and nothing more: the caller is handed the fallback
+// alongside it and words the message with that, the same way a title that could not be read costs
+// one line its title rather than the message. An answer that came back empty is the same case
+// arriving by another road — a setting cleared to nothing is not a language, and not a name to put
+// at the head of a sentence — so it falls back too, and quietly, being an answer rather than a
+// refusal.
+func readPreferences() (preferences, error) {
+	args := append([]string{"config", "--json"}, actorFlag...)
+	raw, err := runAmenbo(args...)
+	if err != nil {
+		return defaultPreferences, err
+	}
+	var record struct {
+		Settings struct {
+			Language      string `json:"language"`
+			AIDisplayName string `json:"ai_display_name"`
+		} `json:"settings"`
+	}
+	if err := json.Unmarshal(raw, &record); err != nil {
+		return defaultPreferences, fmt.Errorf("reading back the settings: %w", err)
+	}
+	return preferences{
+		language:      orElse(record.Settings.Language, defaultPreferences.language),
+		aiDisplayName: orElse(record.Settings.AIDisplayName, defaultPreferences.aiDisplayName),
+	}, nil
+}
+
+// orElse takes the store's answer where there is one, and the fallback where there is not.
+func orElse(answer, otherwise string) string {
+	if answer = strings.TrimSpace(answer); answer != "" {
+		return answer
+	}
+	return otherwise
+}
