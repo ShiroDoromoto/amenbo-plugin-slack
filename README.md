@@ -167,9 +167,15 @@ AI moved AMB-T-42 to In progress — Ship the thing
 AI finished AMB-T-42 — Ship the thing
 ```
 
-A quiet channel is unaffected: one event with nothing behind it is one message, as before. And a
-batch is never a message held indefinitely — amenbo delivers as fast as it can, so what is waiting is
-waiting on the events already queued in front of it.
+A quiet channel is unaffected: one event with nothing behind it is one message, as before. While the
+sends are getting through, what is waiting is waiting on the events queued in front of it and no
+longer — amenbo delivers as fast as it can.
+
+While they are not getting through, the lines stay owed and pile up, so the hold stops at **200
+messages** and the oldest fall off. `amenbo plugin log slack` says how many were dropped, and when.
+Losing the oldest lines is the cheaper loss: a webhook that has been revoked refuses every flush, and
+a batch left to grow becomes a message longer than Slack will take — at which point fixing the
+webhook would no longer fix the channel.
 
 Two projects on one machine keep out of each other's way: the count amenbo hands over is this
 project's queue, and the lines held are this project's too, so each channel flushes on its own quiet
@@ -269,8 +275,10 @@ can claim, so the first run under the split drops them rather than delivering th
 
 **Nothing is retried.** amenbo drops a failed event and never retries it; two sides retrying one send
 is how one message becomes three, with nobody able to say why. A flush that Slack refused leaves its
-lines still owed instead, so the next one carries them — they are late, not lost. See
-[`hook.go`](hook.go) and [`slack.go`](slack.go).
+lines still owed instead, so the next one carries them — they are late, not lost. What is owed is
+bounded for the same reason it is kept: a refusal that never stops being one would otherwise pile
+lines up for good, so the oldest fall off past 200 and the log says how many. See [`hook.go`](hook.go)
+and [`slack.go`](slack.go).
 
 ## Build
 

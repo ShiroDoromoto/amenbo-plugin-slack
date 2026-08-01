@@ -25,11 +25,24 @@ import (
 //   - **Zero is not a promise that nothing more is coming.** An event written a moment later is
 //     delivered like any other, so a batch flushed on zero may be followed by a second one. That is
 //     one message becoming two, never a message lost.
+//   - **What is held is bounded.** A send that keeps failing — a webhook revoked, say — is a flush
+//     that never empties what it carries, so the hold is capped and the oldest lines fall off it.
 
 // pendingFile holds the messages taken in but not yet sent, one JSON string per line — JSON because a
 // title is the user's text and could carry anything, newlines included, and a line that broke in two
 // would arrive as two messages.
 const pendingFile = "pending-messages.log"
+
+// heldAtMost is how many messages are kept waiting. It is [remembered], because this is the same
+// kind of state kept in the same place for the same reason: what a run has to carry over to the next
+// one has to stay bounded, or a fault nobody is watching turns it into a file that grows for good.
+//
+// Nothing bounds it otherwise. A flush that Slack refused leaves its lines owed and the next flush
+// carries them, which is what makes a refusal late rather than lost — but a webhook that has been
+// revoked refuses every flush, and then the batch only ever grows. It grows into a message longer
+// than Slack will take, and from there the send fails on its own length: fixing the webhook would no
+// longer fix the channel. Dropping the oldest lines is what that costs, and it is the cheaper loss.
+const heldAtMost = remembered
 
 // reachQueueRemainingEnv is how the runner says how much is behind this launch, within the project
 // this launch fires for. It is the same scope as the reach itself, which is what the name says.
@@ -99,11 +112,33 @@ func (p *pending) loosen() {
 	p.path = ""
 }
 
-// save writes what is owed down, so a run that does not come back has not swallowed it.
-func (p pending) save() error {
+// bound drops what no longer fits, oldest first, and says so on stderr so the run that lost it can be
+// read back in `amenbo plugin log slack`.
+//
+// It happens where what is owed is written down, which is the one moment every held line passes
+// through, and it is no business of the send's: whether the last message got through says nothing
+// about how much has piled up behind it. What is dropped goes from this run's batch as well as from
+// the file, so a flush carries what is held and not what was.
+//
+// Saying it on stderr is what makes the loss visible at all. Putting it in the message instead would
+// only reach the channel once a send finally got through — and while nothing does is exactly when
+// lines are being dropped.
+func (p *pending) bound() {
+	if len(p.messages) <= heldAtMost {
+		return
+	}
+	dropped := len(p.messages) - heldAtMost
+	p.messages = p.messages[dropped:]
+	logf("slack: dropped %d of the messages waiting to be sent, oldest first — %d is as many as this plugin holds", dropped, heldAtMost)
+}
+
+// save writes what is owed down, so a run that does not come back has not swallowed it — keeping no
+// more than [heldAtMost] of it.
+func (p *pending) save() error {
 	if !p.durable() {
 		return nil
 	}
+	p.bound()
 	lines := make([]string, 0, len(p.messages))
 	for _, message := range p.messages {
 		line, err := json.Marshal(message)

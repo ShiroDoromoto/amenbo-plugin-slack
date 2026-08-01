@@ -298,6 +298,127 @@ func TestHookHoldsNothingBackWithNoStoreToHoldItIn(t *testing.T) {
 	}
 }
 
+// numbered stands in for an amenbo answering every read with a title of its own, so the lines held
+// can be told apart by the order they were taken in.
+func numbered(t *testing.T) {
+	t.Helper()
+	previous := runAmenbo
+	taken := 0
+	runAmenbo = func(args ...string) ([]byte, error) {
+		if len(args) > 0 && args[0] == "config" {
+			return []byte(englishStore), nil
+		}
+		taken++
+		return []byte(fmt.Sprintf(`{"ref":"AMB-T-42","title":"title %d","status":"done"}`, taken)), nil
+	}
+	t.Cleanup(func() { runAmenbo = previous })
+}
+
+// holding delivers count events with something always behind them, so every line is held and none is
+// sent.
+func holding(t *testing.T, count int) {
+	t.Helper()
+	behind(t, 1)
+	for i := range count {
+		if err := hook(moment(eventTaskCreated, fmt.Sprintf("2026-07-22T09:%02d:%02d", i/60, i%60))); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+// What is held is bounded: a send that never gets through would otherwise pile lines up for good, and
+// the batch would grow past what Slack takes — a channel that a fixed webhook no longer fixes.
+func TestWhatIsHeldStopsAtItsBound(t *testing.T) {
+	remembers(t)
+	slackStands(t)
+	numbered(t)
+	_, stderr := capture(t)
+
+	holding(t, heldAtMost+10)
+
+	owed := held()
+	if len(owed.messages) != heldAtMost {
+		t.Fatalf("the hold should stop at %d lines, got %d", heldAtMost, len(owed.messages))
+	}
+	// Ten more were taken in than fit, so the ten oldest are the ones gone.
+	if first, want := owed.messages[0], "AI created AMB-T-42 — title 11"; first != want {
+		t.Errorf("the oldest lines should fall off the front, got %q", first)
+	}
+	if last, want := owed.messages[len(owed.messages)-1], fmt.Sprintf("AI created AMB-T-42 — title %d", heldAtMost+10); last != want {
+		t.Errorf("the newest line should still be held, got %q", last)
+	}
+	if !strings.Contains(stderr.String(), "dropped") {
+		t.Errorf("the log should say what was dropped, got %q", stderr.String())
+	}
+}
+
+// Under the bound nothing is dropped, and nothing is said about it either — an ordinary burst is not
+// a fault to explain.
+func TestNothingIsDroppedWhileWhatIsHeldFits(t *testing.T) {
+	remembers(t)
+	slackStands(t)
+	numbered(t)
+	_, stderr := capture(t)
+
+	holding(t, heldAtMost)
+
+	owed := held()
+	if len(owed.messages) != heldAtMost {
+		t.Fatalf("everything held should still be there, got %d lines", len(owed.messages))
+	}
+	if first, want := owed.messages[0], "AI created AMB-T-42 — title 1"; first != want {
+		t.Errorf("the first line taken in should still be held, got %q", first)
+	}
+	if stderr.Len() != 0 {
+		t.Errorf("nothing was dropped, so nothing should be said: %q", stderr.String())
+	}
+}
+
+// The failure this bound is for: a webhook that refuses every send. The lines pile up, the oldest
+// fall off, and the message that finally goes out carries what is held rather than what was.
+func TestAWebhookThatKeepsRefusingDoesNotPileUpForever(t *testing.T) {
+	remembers(t)
+	numbered(t)
+	capture(t)
+	refuse := true
+	posted := 0
+	var lines int
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if refuse {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		var body struct{ Text string }
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Errorf("the message should be JSON: %v", err)
+		}
+		posted++
+		lines = strings.Count(body.Text, "\n") + 1
+		fmt.Fprint(w, "ok")
+	}))
+	t.Cleanup(server.Close)
+	t.Setenv(webhookEnv, server.URL)
+
+	behind(t, 0)
+	for i := range heldAtMost + 5 {
+		if err := hook(moment(eventTaskCreated, fmt.Sprintf("2026-07-22T09:%02d:%02d", i/60, i%60))); err == nil {
+			t.Fatalf("a webhook that refuses should fail the run (event %d)", i)
+		}
+	}
+
+	refuse = false
+	if err := hook(moment(eventTaskDone, "2026-07-22T10:00:00Z")); err != nil {
+		t.Fatal(err)
+	}
+
+	if posted != 1 || lines != heldAtMost {
+		t.Errorf("the message should carry the %d lines still held, got %d message(s) of %d lines", heldAtMost, posted, lines)
+	}
+	if owed := held(); len(owed.messages) != 0 {
+		t.Errorf("what went out should no longer be owed, got %d lines", len(owed.messages))
+	}
+}
+
 // A title is the user's text, and a message with a newline in it must not arrive as two.
 func TestAHeldMessageSurvivesANewlineInATitle(t *testing.T) {
 	remembers(t)
