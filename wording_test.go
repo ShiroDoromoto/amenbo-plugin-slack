@@ -268,6 +268,11 @@ func TestEveryLanguageSaysEverything(t *testing.T) {
 		if !strings.Contains(words.unknown, slotEvent) {
 			t.Errorf("%s: the sentence for an unknown event should name it: %q", language, words.unknown)
 		}
+		// The test message names nobody and nothing — a person pressed a button — so it is the
+		// one line here with no slot in it, and holding it is holding that it exists.
+		if words.test == "" {
+			t.Errorf("%s: nothing to send as a test message", language)
+		}
 		for _, status := range statuses {
 			if words.statuses[status] == "" {
 				t.Errorf("%s: no word for the status %q", language, status)

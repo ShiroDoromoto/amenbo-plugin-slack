@@ -14,12 +14,24 @@ import (
 // build beside it, not the whole schema the catalog validates. What no test here can see is
 // whether the release it quotes is the newest one; that is the release procedure's.
 type manifest struct {
-	Name   string           `json:"name"`
-	Repo   string           `json:"repo"`
-	OS     []string         `json:"os"`
-	Events []string         `json:"events"`
-	Config []field          `json:"config"`
-	Assets map[string]asset `json:"assets"`
+	Name     string           `json:"name"`
+	Repo     string           `json:"repo"`
+	OS       []string         `json:"os"`
+	Events   []string         `json:"events"`
+	Config   []field          `json:"config"`
+	Settings settings         `json:"settings"`
+	Assets   map[string]asset `json:"assets"`
+}
+
+// settings is what the form raises on this plugin: one check, and the buttons.
+type settings struct {
+	Check   string   `json:"check"`
+	Actions []action `json:"actions"`
+}
+
+type action struct {
+	Cmd   string `json:"cmd"`
+	Label string `json:"label"`
 }
 
 type asset struct {
@@ -136,7 +148,7 @@ func TestTheManifestDeclaresTheWebhookAsARequiredSecret(t *testing.T) {
 	if name := read(t).Name; name != "slack" {
 		t.Errorf("the plugin's name decides what amenbo runs: %q", name)
 	}
-	webhook := setting(t, "webhook_url")
+	webhook := setting(t, webhookSetting)
 
 	if !webhook.Secret || !webhook.Required {
 		t.Errorf("unexpected setting: %+v", webhook)
@@ -145,6 +157,34 @@ func TestTheManifestDeclaresTheWebhookAsARequiredSecret(t *testing.T) {
 	// one the declared key becomes — not a second spelling that could drift from it.
 	if want := "AMENBO_CONFIG_" + strings.ToUpper(webhook.Key); want != webhookEnv {
 		t.Errorf("the setting reaches the plugin as %q, and it is read from %q", want, webhookEnv)
+	}
+}
+
+// actionLabelLimit is what a button's label may weigh. It is amenbo's rule, held here because a
+// manifest that breaks it is refused at the catalog door rather than on the screen.
+const actionLabelLimit = 40
+
+// The calls the form raises and the calls this plugin answers are the same two. Either half
+// alone is a failure the user meets rather than a test does: a check the manifest names and the
+// code does not leaves the plugin unenablable, and a button raises a call that ends in the usage
+// text.
+func TestTheCallsTheFormRaisesAreTheOnesTheCodeAnswers(t *testing.T) {
+	m := read(t)
+
+	declared := []string{m.Settings.Check}
+	for _, button := range m.Settings.Actions {
+		declared = append(declared, button.Cmd)
+		if button.Label == "" || len(button.Label) > actionLabelLimit {
+			t.Errorf("a button's label is 1 to %d bytes, got %q", actionLabelLimit, button.Label)
+		}
+	}
+	for _, line := range declared {
+		if _, answered := faces[line]; !answered {
+			t.Errorf("the manifest raises %q, and nothing here answers it", line)
+		}
+	}
+	if len(declared) != len(faces) {
+		t.Errorf("the manifest raises %v, the code answers %d call(s)", declared, len(faces))
 	}
 }
 

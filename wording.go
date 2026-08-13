@@ -52,6 +52,10 @@ type wording struct {
 	// filters on the catalog first, but naming the event beats an empty message for a caller
 	// that hands one over.
 	unknown string
+	// test is the line the settings form's test message carries. It is the one sentence here
+	// that no event produces — a person pressed a button — but it lands in the same channel as
+	// every other, so it is worded here rather than left in the language the author writes in.
+	test string
 	// statuses is amenbo's own word for each state a task can be in. A channel that invented its
 	// own would be naming a state the user cannot find in the app, so these are taken from
 	// amenbo's dictionary rather than translated afresh.
@@ -86,6 +90,7 @@ var wordings = map[string]wording{
 			eventCommentRemoved:   {full: "{who} hat einen Kommentar zu {what} zurückgenommen", bare: "{who} hat {what} zurückgenommen"},
 		},
 		unknown: "{who} hat etwas an {what} gemacht ({event})",
+		test:    "Testnachricht von amenbo — dieses Projekt meldet hierher.",
 		statuses: map[string]string{
 			"todo":        "Offen",
 			"in_progress": "In Arbeit",
@@ -109,6 +114,7 @@ var wordings = map[string]wording{
 			eventCommentRemoved:   {full: "{who} took back a comment on {what}", bare: "{who} took back {what}"},
 		},
 		unknown: "{who} acted on {what} ({event})",
+		test:    "Test message from amenbo — this project reports here.",
 		statuses: map[string]string{
 			"todo":        "To do",
 			"in_progress": "In progress",
@@ -132,6 +138,7 @@ var wordings = map[string]wording{
 			eventCommentRemoved:   {full: "{who} retiró un comentario de {what}", bare: "{who} retiró {what}"},
 		},
 		unknown: "{who} hizo algo en {what} ({event})",
+		test:    "Mensaje de prueba de amenbo: este proyecto informa aquí.",
 		statuses: map[string]string{
 			"todo":        "Pendiente",
 			"in_progress": "En curso",
@@ -155,6 +162,7 @@ var wordings = map[string]wording{
 			eventCommentRemoved:   {full: "{who} a retiré un commentaire sur {what}", bare: "{who} a retiré {what}"},
 		},
 		unknown: "{who} est intervenu sur {what} ({event})",
+		test:    "Message de test d'amenbo — ce projet rend compte ici.",
 		statuses: map[string]string{
 			"todo":        "À faire",
 			"in_progress": "En cours",
@@ -178,6 +186,7 @@ var wordings = map[string]wording{
 			eventCommentRemoved:   {full: "{who} ने {what} पर की टिप्पणी वापस ली", bare: "{who} ने {what} वापस लिया"},
 		},
 		unknown: "{who} ने {what} पर कुछ किया ({event})",
+		test:    "amenbo से परीक्षण संदेश — यह प्रोजेक्ट यहीं बताएगा।",
 		statuses: map[string]string{
 			"todo":        "करना है",
 			"in_progress": "चल रहा है",
@@ -201,6 +210,7 @@ var wordings = map[string]wording{
 			eventCommentRemoved:   {full: "{who} menarik komentar pada {what}", bare: "{who} menarik {what}"},
 		},
 		unknown: "{who} melakukan sesuatu pada {what} ({event})",
+		test:    "Pesan uji dari amenbo — proyek ini melapor ke sini.",
 		statuses: map[string]string{
 			"todo":        "Akan dikerjakan",
 			"in_progress": "Sedang dikerjakan",
@@ -224,6 +234,7 @@ var wordings = map[string]wording{
 			eventCommentRemoved:   {full: "{who} ha ritirato un commento su {what}", bare: "{who} ha ritirato {what}"},
 		},
 		unknown: "{who} è intervenuto su {what} ({event})",
+		test:    "Messaggio di prova da amenbo — questo progetto riferisce qui.",
 		statuses: map[string]string{
 			"todo":        "Da fare",
 			"in_progress": "In corso",
@@ -247,6 +258,7 @@ var wordings = map[string]wording{
 			eventCommentRemoved:   {full: "{who} が {what} のコメントを取り消しました", bare: "{who} が {what} を取り消しました"},
 		},
 		unknown: "{who} が {what} に対して操作しました（{event}）",
+		test:    "amenbo からのテスト送信です。このプロジェクトはここへ報告します。",
 		statuses: map[string]string{
 			"todo":        "未着手",
 			"in_progress": "進行中",
@@ -270,6 +282,7 @@ var wordings = map[string]wording{
 			eventCommentRemoved:   {full: "{who}이(가) {what}의 댓글을 거뒀습니다", bare: "{who}이(가) {what}을(를) 거뒀습니다"},
 		},
 		unknown: "{who}이(가) {what}에 무언가 했습니다 ({event})",
+		test:    "amenbo에서 보낸 테스트 메시지입니다. 이 프로젝트는 여기로 보고합니다.",
 		statuses: map[string]string{
 			"todo":        "할 일",
 			"in_progress": "진행 중",
@@ -293,6 +306,7 @@ var wordings = map[string]wording{
 			eventCommentRemoved:   {full: "{who} heeft een reactie op {what} ingetrokken", bare: "{who} heeft {what} ingetrokken"},
 		},
 		unknown: "{who} heeft iets met {what} gedaan ({event})",
+		test:    "Testbericht van amenbo — dit project meldt hier.",
 		statuses: map[string]string{
 			"todo":        "Te doen",
 			"in_progress": "Bezig",
@@ -316,6 +330,7 @@ var wordings = map[string]wording{
 			eventCommentRemoved:   {full: "{who} wycofał(a) komentarz do {what}", bare: "{who} wycofał(a) {what}"},
 		},
 		unknown: "{who} zrobił(a) coś z {what} ({event})",
+		test:    "Wiadomość testowa z amenbo — ten projekt raportuje tutaj.",
 		statuses: map[string]string{
 			"todo":        "Do zrobienia",
 			"in_progress": "W toku",
@@ -339,6 +354,7 @@ var wordings = map[string]wording{
 			eventCommentRemoved:   {full: "{who} retirou um comentário de {what}", bare: "{who} retirou {what}"},
 		},
 		unknown: "{who} fez algo em {what} ({event})",
+		test:    "Mensagem de teste do amenbo — este projeto reporta aqui.",
 		statuses: map[string]string{
 			"todo":        "A fazer",
 			"in_progress": "Em andamento",
@@ -362,6 +378,7 @@ var wordings = map[string]wording{
 			eventCommentRemoved:   {full: "{who} отозвал комментарий к {what}", bare: "{who} отозвал {what}"},
 		},
 		unknown: "{who} что-то сделал с {what} ({event})",
+		test:    "Тестовое сообщение от amenbo — этот проект отчитывается сюда.",
 		statuses: map[string]string{
 			"todo":        "К выполнению",
 			"in_progress": "В работе",
@@ -385,6 +402,7 @@ var wordings = map[string]wording{
 			eventCommentRemoved:   {full: "{who} ถอนความเห็นใน {what}", bare: "{who} ถอน {what}"},
 		},
 		unknown: "{who} ทำบางอย่างกับ {what} ({event})",
+		test:    "ข้อความทดสอบจาก amenbo — โปรเจกต์นี้จะรายงานมาที่นี่",
 		statuses: map[string]string{
 			"todo":        "รอทำ",
 			"in_progress": "กำลังทำ",
@@ -408,6 +426,7 @@ var wordings = map[string]wording{
 			eventCommentRemoved:   {full: "{who}, {what} kaydındaki yorumu geri aldı", bare: "{who}, {what} geri aldı"},
 		},
 		unknown: "{who}, {what} üzerinde bir işlem yaptı ({event})",
+		test:    "amenbo'dan test mesajı — bu proje buraya bildiriyor.",
 		statuses: map[string]string{
 			"todo":        "Yapılacak",
 			"in_progress": "Sürüyor",
@@ -431,6 +450,7 @@ var wordings = map[string]wording{
 			eventCommentRemoved:   {full: "{who} відкликав коментар до {what}", bare: "{who} відкликав {what}"},
 		},
 		unknown: "{who} щось зробив з {what} ({event})",
+		test:    "Тестове повідомлення від amenbo — цей проєкт звітує сюди.",
 		statuses: map[string]string{
 			"todo":        "До виконання",
 			"in_progress": "У роботі",
@@ -454,6 +474,7 @@ var wordings = map[string]wording{
 			eventCommentRemoved:   {full: "{who} đã rút lại bình luận về {what}", bare: "{who} đã rút lại {what}"},
 		},
 		unknown: "{who} đã tác động đến {what} ({event})",
+		test:    "Tin nhắn thử từ amenbo — dự án này sẽ báo về đây.",
 		statuses: map[string]string{
 			"todo":        "Cần làm",
 			"in_progress": "Đang làm",
@@ -477,6 +498,7 @@ var wordings = map[string]wording{
 			eventCommentRemoved:   {full: "{who} 撤回了对 {what} 的评论", bare: "{who} 撤回了 {what}"},
 		},
 		unknown: "{who} 对 {what} 做了操作（{event}）",
+		test:    "来自 amenbo 的测试消息——这个项目会报告到这里。",
 		statuses: map[string]string{
 			"todo":        "待办",
 			"in_progress": "进行中",
@@ -500,6 +522,7 @@ var wordings = map[string]wording{
 			eventCommentRemoved:   {full: "{who} 撤回了對 {what} 的評論", bare: "{who} 撤回了 {what}"},
 		},
 		unknown: "{who} 對 {what} 做了操作（{event}）",
+		test:    "來自 amenbo 的測試訊息——這個專案會報告到這裡。",
 		statuses: map[string]string{
 			"todo":        "待辦",
 			"in_progress": "進行中",
@@ -582,6 +605,17 @@ func stateWord(how preferences, event, newState string) string {
 		return whoseName(how, newState)
 	}
 	return newState
+}
+
+// testLine is the whole of a test message — the one line this plugin sends that describes no
+// event. A language with no row of its own, or a row this build filled in only in part, falls
+// back to English the same way a sentence does: a channel getting the line in English says what
+// it was sent to say, and an empty message does not.
+func testLine(language string) string {
+	if line := wordings[language].test; line != "" {
+		return line
+	}
+	return wordings[fallbackLanguage].test
 }
 
 // statusWord is amenbo's own word for a state. A status this build has no word for passes through

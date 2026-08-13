@@ -34,6 +34,9 @@ Run these from the folder amenbo is bound to: the setting and the switch are tha
 webhook goes in through `-`, which reads it from stdin — written as an argument it would sit in the
 shell's history and in anything reading the process list, and a webhook is a credential.
 
+Switching it on is where the URL is first read: a value that is not shaped like a webhook is said
+so there, rather than at the first event that fails to post ([below](#whether-the-webhook-is-one)).
+
 ### Getting the webhook URL
 
 The webhook is Slack's, not amenbo's: it is made in the workspace, points at one channel, and is the
@@ -208,6 +211,33 @@ Being declared secret is what keeps the webhook out of an `export` and out of th
 stdin: amenbo hands it over in the environment instead, and this plugin reads it from there. It never
 reads a secret file of its own. The choice is not a secret, so it arrives on stdin with the event.
 
+### Whether the webhook is one
+
+A pasted URL is right or wrong long before an event fires, so the settings form asks this plugin
+twice — once by itself, and once when you press:
+
+| | When | What it does |
+|---|---|---|
+| the check | enabling, and after a save while enabled | reads the URL's shape. **Never posts** |
+| **Send a test message** | you press it | posts one line to the channel |
+
+```sh
+amenbo --actor ai plugin run slack config check    # {"v":1,"ok":true,…}
+amenbo --actor ai plugin run slack config test     # one line, into the channel
+```
+
+They are split by what they may cost. The check runs unasked and is held to two seconds, so a check
+that posted would put a line in the channel every time you saved — it reads `https://hooks.slack.com`
+and `/services/` and three parts after it, and stops there. **A check that does not say yes leaves
+the plugin disabled**, which is why it says nothing about whether the webhook still works: a URL
+revoked yesterday still has the shape, and only a real post can tell you otherwise. That post is the
+button.
+
+The verdict's sentences go on the settings form and nowhere else — they quote none of what you
+pasted, the CLI's refusal names the box and not the text, and `amenbo agent --json` carries neither.
+The test message is a line in a channel like any other, so it is written in the language you read
+amenbo in and headed by the project you pressed in.
+
 ## Why nothing arrived
 
 A hook is fire-and-forget, so its failure surfaces nowhere you were listening. The execution
@@ -223,10 +253,13 @@ never in them — a log a channel can be posted to from is a leak.
 ## The contract, as this plugin reads it
 
 A plugin is just an executable. amenbo starts it, writes one JSON document to its stdin, and
-reads back what it wrote and how it exited. This one has a single face, the **observation
-hook**: amenbo fires it with no arguments when an event fires, and nobody is waiting for an
-answer. There is nothing here worth invoking on purpose, so an argument is refused rather than
-answered.
+reads back what it wrote and how it exited. Its face is the **observation hook**: amenbo fires
+it with no arguments when an event fires, and nobody is waiting for an answer.
+
+Two calls stand beside it, `config check` and `config test`, and they are the settings form's
+rather than a terminal's — [above](#whether-the-webhook-is-one). The manifest declares them under
+`settings`; amenbo raises them down the road every other run takes, so they arrive with the same
+injected settings and land in the same execution log. Any other argument is refused.
 
 ```json
 { "v": 1, "event": "task.done", "id": 42, "actor": "ai", "at": "2026-07-22T09:00:00Z" }
@@ -305,6 +338,11 @@ make install AMENBO_BASE="$AMENBO_HOME"
 amenbo plugin config set slack webhook_url <url>
 amenbo plugin enable slack
 ```
+
+A local sink is the way to watch a build post without a channel taking the lines — and it will not
+get past `enable`, since it is not shaped like a Slack webhook and the check says so. Hand the URL
+over as `AMENBO_CONFIG_WEBHOOK_URL` instead, which is where the plugin reads it from anyway, and the
+gate is not in the way of a build nobody has released yet.
 
 That lays the binary down beside [`dev/manifest.json`](dev/manifest.json), a stand-in for the
 entry the catalog holds: it carries the same fields, so the two can be read against each other.

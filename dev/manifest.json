@@ -63,6 +63,12 @@
       ]
     }
   ],
+  "settings": {
+    "check": "config check",
+    "actions": [
+      { "cmd": "config test", "label": "Send a test message" }
+    ]
+  },
   "events": [
     "task.created",
     "task.status_changed",

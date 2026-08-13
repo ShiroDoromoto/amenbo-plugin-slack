@@ -1,10 +1,13 @@
 // Command slack is amenbo's official Slack plugin: it reports to a Slack channel what the
 // user's AI did in a project while nobody was watching it.
 //
-// It has one face, the observation hook. amenbo fires it with NO arguments and the event's
-// JSON on stdin, nobody is waiting for the answer, and what it does with the event is send
-// one message. There is no command face: nothing here is worth invoking on purpose, and a
-// plugin that only observes says so by refusing an argument rather than by inventing a verb.
+// Its face is the observation hook. amenbo fires it with NO arguments and the event's JSON on
+// stdin, nobody is waiting for the answer, and what it does with the event is send one message.
+//
+// Two calls stand beside it, and neither is a verb invented for a terminal: they are what the
+// settings form raises, declared in the manifest under `settings` and answered in settings.go.
+// `config check` says whether the webhook could be one, at the moment the plugin is enabled;
+// `config test` posts, because whether it still works is the one thing reading it cannot say.
 //
 // Two things shape what it sends.
 //
@@ -28,6 +31,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"slices"
 	"strings"
 )
 
@@ -141,14 +145,33 @@ func main() {
 		return
 	}
 
+	// A call, if it is one the settings form declared. The whole line is the key, since what
+	// the manifest names is the line and not its first word (see settings.go).
+	if answer, declared := faces[strings.Join(args, " ")]; declared {
+		do(answer())
+		return
+	}
+
 	switch args[0] {
 	case "help", "-h", "--help":
 		usage()
 	default:
-		logf("slack: %q is not a command — this plugin only reports events", strings.Join(args, " "))
+		logf("slack: %q is not a command — the calls here are %s", strings.Join(args, " "), declaredFaces())
 		usage()
 		os.Exit(2)
 	}
+}
+
+// declaredFaces lists what may be typed, for the refusal that says what may not. It is read off
+// the same map the calls are answered from, so a call added there is offered here without
+// anyone remembering to.
+func declaredFaces() string {
+	lines := make([]string, 0, len(faces))
+	for line := range faces {
+		lines = append(lines, "'"+line+"'")
+	}
+	slices.Sort(lines)
+	return strings.Join(lines, " and ")
 }
 
 // do ends the run on the verdict the exit code carries. A hook's failure reaches nobody who
@@ -164,9 +187,9 @@ func do(err error) {
 func usage() {
 	logf(`slack — amenbo's official plugin: report your AI's writes to a Slack channel
 
-This plugin is not called. amenbo starts it when an event fires, and it reports the event as one
-line, under a heading naming the project it came from. Lines wait while amenbo says more events are
-queued, so a burst — a project deleted, a pile cleared — arrives as one message rather than tens.
+This plugin is mostly not called. amenbo starts it when an event fires, and it reports the event as
+one line, under a heading naming the project it came from. Lines wait while amenbo says more events
+are queued, so a burst — a project deleted, a pile cleared — arrives as one message rather than tens.
 
 Only the writes an AI drove are reported: the ones you drove yourself, you were there for.
 Which of them reach the channel is yours to choose — by default a task created, its status
@@ -184,6 +207,11 @@ Settings:
 The setting belongs to a project, so the value is which channel that project reports to.
 Fill it in with 'amenbo plugin config set slack webhook_url <url>', then switch the plugin
 on for the project with 'amenbo plugin enable slack'.
+
+Calls (the settings form raises these; a terminal may too):
+  config check  whether the webhook could be one — read, never posted. Run when the plugin
+                is enabled, and after a save while it is
+  config test   post one message, which is the only way to find out that it still works
 
 Why nothing arrived is in 'amenbo plugin log slack' — one line per run, and the diagnostics
 of any run that did not end cleanly.`)
