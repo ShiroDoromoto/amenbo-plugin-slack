@@ -34,11 +34,19 @@
   "payload_v": 1,
   "min_amenbo": "3.1.0",
   "config": [
-    { "key": "webhook_url", "label": "Slack webhook URL", "secret": true, "required": true },
+    {
+      "key": "webhook_url",
+      "label": "Slack webhook URL",
+      "secret": true,
+      "required": true,
+      "help": "Slack makes this, not amenbo, and the URL is the channel: a webhook for the wrong channel posts to the wrong room with nothing else set wrong.\nAt api.slack.com/apps, create an app in the workspace that should hear about this project, turn on Incoming Webhooks, add one to the channel it should post to, and copy the URL it hands back.\nIt is held as a secret — it never leaves amenbo into an export, a log, or a read-back.",
+      "placeholder": "https://hooks.slack.com/services/T…/B…/…"
+    },
     {
       "key": "events",
       "label": "What to report",
       "type": "multi",
+      "help": "Ticking none is an answer and it is honoured: the plugin stays enabled and reports nothing. Clearing this puts the default four back.",
       "default": "task.created,task.status_changed,task.done,task.rejected",
       "options": [
         { "value": "task.created", "label": "A task was created" },

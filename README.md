@@ -196,6 +196,14 @@ amenbo plugin config set slack events task.done,task.rejected     # only the ter
 which is a different thing from never having answered. Clearing the setting (an empty value) puts
 the default back.
 
+The short of both is in the manifest too — a `help` line under each field, and the webhook's shape as
+a `placeholder` in the empty box — so the setting form answers there for whoever never opens this
+file. Reword one and reword the other, and the catalog entry's translations with them.
+
+The placeholder elides the parts that vary (`T…/B…/…`) instead of spelling a plausible URL out. A
+full-shaped webhook is what a secret scanner blocks a push over, and here it would be blocking a
+string nobody can post to.
+
 Being declared secret is what keeps the webhook out of an `export` and out of the `config` object on
 stdin: amenbo hands it over in the environment instead, and this plugin reads it from there. It never
 reads a secret file of its own. The choice is not a secret, so it arrives on stdin with the event.
