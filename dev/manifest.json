@@ -7,28 +7,28 @@
   "category": "notification",
   "assets": {
     "macos-arm64": {
-      "url": "https://github.com/ShiroDoromoto/amenbo-plugin-slack/releases/download/v5/slack-v5-macos-arm64.tar.gz",
-      "checksum": "sha256:552e91ceae6e93ecbde9e60327e1fd6e39f9de174391f466267007f2af2199e8"
+      "url": "https://github.com/ShiroDoromoto/amenbo-plugin-slack/releases/download/v6/slack-v6-macos-arm64.tar.gz",
+      "checksum": "sha256:a647d4ad13150e389fd3efe8f04df04f473f0507d81d798108773bbb3c84a9b9"
     },
     "macos-x64": {
-      "url": "https://github.com/ShiroDoromoto/amenbo-plugin-slack/releases/download/v5/slack-v5-macos-x64.tar.gz",
-      "checksum": "sha256:48ef1faeb096f79711201385fb4450899da9ccabc14a5b32958ee3be4308979b"
+      "url": "https://github.com/ShiroDoromoto/amenbo-plugin-slack/releases/download/v6/slack-v6-macos-x64.tar.gz",
+      "checksum": "sha256:bb96b9c052a74bdc9a847c9aa43b6b8d3d287c984fd612c2e36798cf14d1a752"
     },
     "linux-x64": {
-      "url": "https://github.com/ShiroDoromoto/amenbo-plugin-slack/releases/download/v5/slack-v5-linux-x64.tar.gz",
-      "checksum": "sha256:38591612d09514c19f6d5e11c52e8f8f750d1f1a7c6d0e52aed4c24572bf22a0"
+      "url": "https://github.com/ShiroDoromoto/amenbo-plugin-slack/releases/download/v6/slack-v6-linux-x64.tar.gz",
+      "checksum": "sha256:4e7a1dc8a32b99482edc0e996ff41269c65a2e72aa76145d23894386f0e100a9"
     },
     "linux-arm64": {
-      "url": "https://github.com/ShiroDoromoto/amenbo-plugin-slack/releases/download/v5/slack-v5-linux-arm64.tar.gz",
-      "checksum": "sha256:7d10b3b0bdf0fa2a9766dbcb7cc74f21bab2bd3193a26c3b12b311ee380d7f88"
+      "url": "https://github.com/ShiroDoromoto/amenbo-plugin-slack/releases/download/v6/slack-v6-linux-arm64.tar.gz",
+      "checksum": "sha256:c35c5f0ccac2297117c7efd42a32a4560990e67029ce0890dff31cfb29b454b2"
     },
     "windows-x64": {
-      "url": "https://github.com/ShiroDoromoto/amenbo-plugin-slack/releases/download/v5/slack-v5-windows-x64.tar.gz",
-      "checksum": "sha256:1ac5a5c7fea10e33736224bfe96ec112f5b35362a12878c3e5362cb1bdd393e9"
+      "url": "https://github.com/ShiroDoromoto/amenbo-plugin-slack/releases/download/v6/slack-v6-windows-x64.tar.gz",
+      "checksum": "sha256:4410dddc07b04ed20da158f9c48edae50c4920761b0c2e73c0487b448055b546"
     },
     "windows-arm64": {
-      "url": "https://github.com/ShiroDoromoto/amenbo-plugin-slack/releases/download/v5/slack-v5-windows-arm64.tar.gz",
-      "checksum": "sha256:eed81c90780fcf7b58ddba6dc8cae6cb34c8ba885f1019702ef0e2df0eea9551"
+      "url": "https://github.com/ShiroDoromoto/amenbo-plugin-slack/releases/download/v6/slack-v6-windows-arm64.tar.gz",
+      "checksum": "sha256:009aa25f723fc841d473876194129562f64538480145caced4f71dfba19226bd"
     }
   },
   "payload_v": 1,
