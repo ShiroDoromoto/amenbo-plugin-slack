@@ -255,8 +255,13 @@ func TestEveryLanguageSaysEverything(t *testing.T) {
 				if one == "" {
 					continue
 				}
-				if !strings.Contains(one, slotWho) || !strings.Contains(one, slotWhat) {
-					t.Errorf("%s: %q should name who acted and what on", language, one)
+				if !strings.Contains(one, slotWhat) {
+					t.Errorf("%s: %q should name what it is about", language, one)
+				}
+				// An event nobody drove has no subject to name, and naming one
+				// would put a party into a sentence about a day arriving.
+				if named := strings.Contains(one, slotWho); named == unattended[event] {
+					t.Errorf("%s: %q should name who acted only if anybody did", language, one)
 				}
 			}
 			// A comment's fuller form spends the record itself — the task it hangs on — so

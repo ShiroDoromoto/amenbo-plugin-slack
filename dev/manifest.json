@@ -46,8 +46,8 @@
       "key": "events",
       "label": "What to report",
       "type": "multi",
-      "help": "Ticking none is an answer and it is honoured: the plugin stays enabled and reports nothing. Clearing this puts the default four back.",
-      "default": "task.created,task.status_changed,task.done,task.rejected",
+      "help": "Ticking none is an answer and it is honoured: the plugin stays enabled and reports nothing. Clearing this puts the default six back.",
+      "default": "task.created,task.status_changed,task.done,task.rejected,task.due,task.due_tomorrow",
       "options": [
         { "value": "task.created", "label": "A task was created" },
         { "value": "task.status_changed", "label": "A task's status moved" },
@@ -59,7 +59,9 @@
         { "value": "decision.accepted", "label": "A decision was accepted" },
         { "value": "decision.rejected", "label": "A decision was rejected" },
         { "value": "comment.added", "label": "A comment was added" },
-        { "value": "comment.removed", "label": "A comment was taken back" }
+        { "value": "comment.removed", "label": "A comment was taken back" },
+        { "value": "task.due", "label": "A task is due today, or overdue" },
+        { "value": "task.due_tomorrow", "label": "A task is due tomorrow" }
       ]
     }
   ],
@@ -80,6 +82,8 @@
     "decision.accepted",
     "decision.rejected",
     "comment.added",
-    "comment.removed"
+    "comment.removed",
+    "task.due",
+    "task.due_tomorrow"
   ]
 }

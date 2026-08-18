@@ -45,10 +45,11 @@ type say struct {
 // wording is one language's side of every message: a sentence per event, a sentence for an event
 // this build has no wording for, and a word per status.
 type wording struct {
-	// says is keyed by the event, so a translator sees the same eleven keys the manifest
-	// subscribes to and the user chooses among.
+	// says is keyed by the event, so a translator sees the same thirteen keys the manifest
+	// subscribes to and the user chooses among. Two of them name nobody: a due date arriving
+	// is not something anyone did, so those sentences have no room for a subject.
 	says map[string]say
-	// unknown is what a twelfth event is reported as. It cannot be reached through hook, which
+	// unknown is what a fourteenth event is reported as. It cannot be reached through hook, which
 	// filters on the catalog first, but naming the event beats an empty message for a caller
 	// that hands one over.
 	unknown string
@@ -88,6 +89,8 @@ var wordings = map[string]wording{
 			eventDecisionRejected: {bare: "{who} hat {what} abgelehnt"},
 			eventCommentAdded:     {full: "{who} hat {what} kommentiert", bare: "{who} hat {what} hinzugefügt"},
 			eventCommentRemoved:   {full: "{who} hat einen Kommentar zu {what} zurückgenommen", bare: "{who} hat {what} zurückgenommen"},
+			eventTaskDue:          {bare: "{what} ist fällig"},
+			eventTaskDueTomorrow:  {bare: "{what} ist morgen fällig"},
 		},
 		unknown: "{who} hat etwas an {what} gemacht ({event})",
 		test:    "Testnachricht von amenbo — dieses Projekt meldet hierher.",
@@ -112,6 +115,8 @@ var wordings = map[string]wording{
 			eventDecisionRejected: {bare: "{who} rejected {what}"},
 			eventCommentAdded:     {full: "{who} added a comment on {what}", bare: "{who} added {what}"},
 			eventCommentRemoved:   {full: "{who} took back a comment on {what}", bare: "{who} took back {what}"},
+			eventTaskDue:          {bare: "{what} is due"},
+			eventTaskDueTomorrow:  {bare: "{what} is due tomorrow"},
 		},
 		unknown: "{who} acted on {what} ({event})",
 		test:    "Test message from amenbo — this project reports here.",
@@ -136,6 +141,8 @@ var wordings = map[string]wording{
 			eventDecisionRejected: {bare: "{who} rechazó {what}"},
 			eventCommentAdded:     {full: "{who} comentó en {what}", bare: "{who} añadió {what}"},
 			eventCommentRemoved:   {full: "{who} retiró un comentario de {what}", bare: "{who} retiró {what}"},
+			eventTaskDue:          {bare: "El plazo de {what} ha llegado"},
+			eventTaskDueTomorrow:  {bare: "El plazo de {what} es mañana"},
 		},
 		unknown: "{who} hizo algo en {what} ({event})",
 		test:    "Mensaje de prueba de amenbo: este proyecto informa aquí.",
@@ -160,6 +167,8 @@ var wordings = map[string]wording{
 			eventDecisionRejected: {bare: "{who} a rejeté {what}"},
 			eventCommentAdded:     {full: "{who} a commenté {what}", bare: "{who} a ajouté {what}"},
 			eventCommentRemoved:   {full: "{who} a retiré un commentaire sur {what}", bare: "{who} a retiré {what}"},
+			eventTaskDue:          {bare: "L'échéance de {what} est arrivée"},
+			eventTaskDueTomorrow:  {bare: "L'échéance de {what} est demain"},
 		},
 		unknown: "{who} est intervenu sur {what} ({event})",
 		test:    "Message de test d'amenbo — ce projet rend compte ici.",
@@ -184,6 +193,8 @@ var wordings = map[string]wording{
 			eventDecisionRejected: {bare: "{who} ने {what} अस्वीकार किया"},
 			eventCommentAdded:     {full: "{who} ने {what} पर टिप्पणी की", bare: "{who} ने {what} जोड़ा"},
 			eventCommentRemoved:   {full: "{who} ने {what} पर की टिप्पणी वापस ली", bare: "{who} ने {what} वापस लिया"},
+			eventTaskDue:          {bare: "{what} की समय-सीमा आ गई है"},
+			eventTaskDueTomorrow:  {bare: "{what} की समय-सीमा कल है"},
 		},
 		unknown: "{who} ने {what} पर कुछ किया ({event})",
 		test:    "amenbo से परीक्षण संदेश — यह प्रोजेक्ट यहीं बताएगा।",
@@ -208,6 +219,8 @@ var wordings = map[string]wording{
 			eventDecisionRejected: {bare: "{who} menolak {what}"},
 			eventCommentAdded:     {full: "{who} mengomentari {what}", bare: "{who} menambahkan {what}"},
 			eventCommentRemoved:   {full: "{who} menarik komentar pada {what}", bare: "{who} menarik {what}"},
+			eventTaskDue:          {bare: "{what} sudah jatuh tempo"},
+			eventTaskDueTomorrow:  {bare: "{what} jatuh tempo besok"},
 		},
 		unknown: "{who} melakukan sesuatu pada {what} ({event})",
 		test:    "Pesan uji dari amenbo — proyek ini melapor ke sini.",
@@ -232,6 +245,8 @@ var wordings = map[string]wording{
 			eventDecisionRejected: {bare: "{who} ha respinto {what}"},
 			eventCommentAdded:     {full: "{who} ha commentato {what}", bare: "{who} ha aggiunto {what}"},
 			eventCommentRemoved:   {full: "{who} ha ritirato un commento su {what}", bare: "{who} ha ritirato {what}"},
+			eventTaskDue:          {bare: "{what} è in scadenza"},
+			eventTaskDueTomorrow:  {bare: "{what} scade domani"},
 		},
 		unknown: "{who} è intervenuto su {what} ({event})",
 		test:    "Messaggio di prova da amenbo — questo progetto riferisce qui.",
@@ -256,6 +271,8 @@ var wordings = map[string]wording{
 			eventDecisionRejected: {bare: "{who} が {what} を却下しました"},
 			eventCommentAdded:     {full: "{who} が {what} にコメントしました", bare: "{who} が {what} を追加しました"},
 			eventCommentRemoved:   {full: "{who} が {what} のコメントを取り消しました", bare: "{who} が {what} を取り消しました"},
+			eventTaskDue:          {bare: "{what} が期日を迎えています"},
+			eventTaskDueTomorrow:  {bare: "{what} は明日が期日です"},
 		},
 		unknown: "{who} が {what} に対して操作しました（{event}）",
 		test:    "amenbo からのテスト送信です。このプロジェクトはここへ報告します。",
@@ -280,6 +297,8 @@ var wordings = map[string]wording{
 			eventDecisionRejected: {bare: "{who}이(가) {what}을(를) 기각했습니다"},
 			eventCommentAdded:     {full: "{who}이(가) {what}에 댓글을 남겼습니다", bare: "{who}이(가) {what}을(를) 남겼습니다"},
 			eventCommentRemoved:   {full: "{who}이(가) {what}의 댓글을 거뒀습니다", bare: "{who}이(가) {what}을(를) 거뒀습니다"},
+			eventTaskDue:          {bare: "{what}의 기한이 되었습니다"},
+			eventTaskDueTomorrow:  {bare: "{what}의 기한이 내일입니다"},
 		},
 		unknown: "{who}이(가) {what}에 무언가 했습니다 ({event})",
 		test:    "amenbo에서 보낸 테스트 메시지입니다. 이 프로젝트는 여기로 보고합니다.",
@@ -304,6 +323,8 @@ var wordings = map[string]wording{
 			eventDecisionRejected: {bare: "{who} heeft {what} afgewezen"},
 			eventCommentAdded:     {full: "{who} heeft op {what} gereageerd", bare: "{who} heeft {what} toegevoegd"},
 			eventCommentRemoved:   {full: "{who} heeft een reactie op {what} ingetrokken", bare: "{who} heeft {what} ingetrokken"},
+			eventTaskDue:          {bare: "De deadline van {what} is bereikt"},
+			eventTaskDueTomorrow:  {bare: "De deadline van {what} is morgen"},
 		},
 		unknown: "{who} heeft iets met {what} gedaan ({event})",
 		test:    "Testbericht van amenbo — dit project meldt hier.",
@@ -328,6 +349,8 @@ var wordings = map[string]wording{
 			eventDecisionRejected: {bare: "{who} odrzucił(a) {what}"},
 			eventCommentAdded:     {full: "{who} skomentował(a) {what}", bare: "{who} dodał(a) {what}"},
 			eventCommentRemoved:   {full: "{who} wycofał(a) komentarz do {what}", bare: "{who} wycofał(a) {what}"},
+			eventTaskDue:          {bare: "Termin {what} nadszedł"},
+			eventTaskDueTomorrow:  {bare: "Termin {what} przypada jutro"},
 		},
 		unknown: "{who} zrobił(a) coś z {what} ({event})",
 		test:    "Wiadomość testowa z amenbo — ten projekt raportuje tutaj.",
@@ -352,6 +375,8 @@ var wordings = map[string]wording{
 			eventDecisionRejected: {bare: "{who} recusou {what}"},
 			eventCommentAdded:     {full: "{who} comentou em {what}", bare: "{who} adicionou {what}"},
 			eventCommentRemoved:   {full: "{who} retirou um comentário de {what}", bare: "{who} retirou {what}"},
+			eventTaskDue:          {bare: "O prazo de {what} chegou"},
+			eventTaskDueTomorrow:  {bare: "O prazo de {what} é amanhã"},
 		},
 		unknown: "{who} fez algo em {what} ({event})",
 		test:    "Mensagem de teste do amenbo — este projeto reporta aqui.",
@@ -376,6 +401,8 @@ var wordings = map[string]wording{
 			eventDecisionRejected: {bare: "{who} отклонил {what}"},
 			eventCommentAdded:     {full: "{who} прокомментировал {what}", bare: "{who} добавил {what}"},
 			eventCommentRemoved:   {full: "{who} отозвал комментарий к {what}", bare: "{who} отозвал {what}"},
+			eventTaskDue:          {bare: "Срок {what} наступил"},
+			eventTaskDueTomorrow:  {bare: "Срок {what} — завтра"},
 		},
 		unknown: "{who} что-то сделал с {what} ({event})",
 		test:    "Тестовое сообщение от amenbo — этот проект отчитывается сюда.",
@@ -400,6 +427,8 @@ var wordings = map[string]wording{
 			eventDecisionRejected: {bare: "{who} ตีตก {what}"},
 			eventCommentAdded:     {full: "{who} แสดงความเห็นใน {what}", bare: "{who} เพิ่ม {what}"},
 			eventCommentRemoved:   {full: "{who} ถอนความเห็นใน {what}", bare: "{who} ถอน {what}"},
+			eventTaskDue:          {bare: "{what} ถึงกำหนดแล้ว"},
+			eventTaskDueTomorrow:  {bare: "{what} ถึงกำหนดพรุ่งนี้"},
 		},
 		unknown: "{who} ทำบางอย่างกับ {what} ({event})",
 		test:    "ข้อความทดสอบจาก amenbo — โปรเจกต์นี้จะรายงานมาที่นี่",
@@ -424,6 +453,8 @@ var wordings = map[string]wording{
 			eventDecisionRejected: {bare: "{who}, {what} kararını reddetti"},
 			eventCommentAdded:     {full: "{who}, {what} kaydına yorum yaptı", bare: "{who}, {what} ekledi"},
 			eventCommentRemoved:   {full: "{who}, {what} kaydındaki yorumu geri aldı", bare: "{who}, {what} geri aldı"},
+			eventTaskDue:          {bare: "{what} kaydının teslim tarihi geldi"},
+			eventTaskDueTomorrow:  {bare: "{what} kaydının teslim tarihi yarın"},
 		},
 		unknown: "{who}, {what} üzerinde bir işlem yaptı ({event})",
 		test:    "amenbo'dan test mesajı — bu proje buraya bildiriyor.",
@@ -448,6 +479,8 @@ var wordings = map[string]wording{
 			eventDecisionRejected: {bare: "{who} відхилив {what}"},
 			eventCommentAdded:     {full: "{who} прокоментував {what}", bare: "{who} додав {what}"},
 			eventCommentRemoved:   {full: "{who} відкликав коментар до {what}", bare: "{who} відкликав {what}"},
+			eventTaskDue:          {bare: "Термін {what} настав"},
+			eventTaskDueTomorrow:  {bare: "Термін {what} — завтра"},
 		},
 		unknown: "{who} щось зробив з {what} ({event})",
 		test:    "Тестове повідомлення від amenbo — цей проєкт звітує сюди.",
@@ -472,6 +505,8 @@ var wordings = map[string]wording{
 			eventDecisionRejected: {bare: "{who} đã bác {what}"},
 			eventCommentAdded:     {full: "{who} đã bình luận về {what}", bare: "{who} đã thêm {what}"},
 			eventCommentRemoved:   {full: "{who} đã rút lại bình luận về {what}", bare: "{who} đã rút lại {what}"},
+			eventTaskDue:          {bare: "{what} đã đến hạn"},
+			eventTaskDueTomorrow:  {bare: "{what} đến hạn vào ngày mai"},
 		},
 		unknown: "{who} đã tác động đến {what} ({event})",
 		test:    "Tin nhắn thử từ amenbo — dự án này sẽ báo về đây.",
@@ -496,6 +531,8 @@ var wordings = map[string]wording{
 			eventDecisionRejected: {bare: "{who} 否决了 {what}"},
 			eventCommentAdded:     {full: "{who} 评论了 {what}", bare: "{who} 添加了 {what}"},
 			eventCommentRemoved:   {full: "{who} 撤回了对 {what} 的评论", bare: "{who} 撤回了 {what}"},
+			eventTaskDue:          {bare: "{what} 已到期"},
+			eventTaskDueTomorrow:  {bare: "{what} 明天到期"},
 		},
 		unknown: "{who} 对 {what} 做了操作（{event}）",
 		test:    "来自 amenbo 的测试消息——这个项目会报告到这里。",
@@ -520,6 +557,8 @@ var wordings = map[string]wording{
 			eventDecisionRejected: {bare: "{who} 否決了 {what}"},
 			eventCommentAdded:     {full: "{who} 評論了 {what}", bare: "{who} 新增了 {what}"},
 			eventCommentRemoved:   {full: "{who} 撤回了對 {what} 的評論", bare: "{who} 撤回了 {what}"},
+			eventTaskDue:          {bare: "{what} 已到期"},
+			eventTaskDueTomorrow:  {bare: "{what} 明天到期"},
 		},
 		unknown: "{who} 對 {what} 做了操作（{event}）",
 		test:    "來自 amenbo 的測試訊息——這個專案會報告到這裡。",
@@ -534,7 +573,8 @@ var wordings = map[string]wording{
 }
 
 // sentence is the message: what the AI did, to which record, in the language the store reads in and
-// under the name it gives its AI.
+// under the name it gives its AI. An event nobody drove has no such subject, and its sentence simply
+// has no place to put one — the replacer fills what a wording asked for and nothing else.
 func sentence(how preferences, in input, about subject) string {
 	said := strings.NewReplacer(
 		slotWho, how.aiDisplayName,
@@ -577,7 +617,7 @@ func saying(language, event string, full bool) string {
 	return form.bare
 }
 
-// unknownSaying is what a twelfth event is reported as.
+// unknownSaying is what a fourteenth event is reported as.
 func unknownSaying(language string) string {
 	if said := wordings[language].unknown; said != "" {
 		return said

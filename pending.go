@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -28,10 +29,41 @@ import (
 //   - **What is held is bounded.** A send that keeps failing — a webhook revoked, say — is a flush
 //     that never empties what it carries, so the hold is capped and the oldest lines fall off it.
 
-// pendingFile holds the messages taken in but not yet sent, one JSON string per line — JSON because a
+// pendingFile holds the messages taken in but not yet sent, one JSON object per line — JSON because a
 // title is the user's text and could carry anything, newlines included, and a line that broke in two
-// would arrive as two messages.
+// would arrive as two messages. An object rather than the bare string it used to be, because a line
+// also has to remember which part of the message it belongs in (see [partOf]); a bare string is
+// still read, being what a build before the parts left behind, and lands among what the AI did.
 const pendingFile = "pending-messages.log"
+
+// The parts a message is laid out in, and the order they are laid out in. What the AI did comes
+// first and reads as it happened; the due dates follow, each kind kept together — the ones already
+// standing before the ones that arrive tomorrow, urgent first.
+//
+// Keeping the two kinds apart is what makes the second one readable at all. A tick can name a dozen
+// tasks at once, and a message that interleaved "is due" with "is due tomorrow" would ask the reader
+// to sort it themselves, line by line, to find out what is actually late.
+const (
+	partActs        = ""
+	partDue         = "due"
+	partDueTomorrow = "due-tomorrow"
+)
+
+// partOrder is that order. A part not in it — a file written by a build that knows one this one does
+// not — is read as [partActs] rather than dropped, a line in the wrong part still saying what
+// happened.
+var partOrder = []string{partActs, partDue, partDueTomorrow}
+
+// partOf says which part an event's line belongs in.
+func partOf(event string) string {
+	switch event {
+	case eventTaskDue:
+		return partDue
+	case eventTaskDueTomorrow:
+		return partDueTomorrow
+	}
+	return partActs
+}
 
 // heldAtMost is how many messages are kept waiting. It is [remembered], because this is the same
 // kind of state kept in the same place for the same reason: what a run has to carry over to the next
@@ -64,12 +96,19 @@ func remaining() int {
 	return count
 }
 
+// line is one message taken in: what it says, and which part of the message it belongs in. The
+// keys are short because every held line carries them.
+type line struct {
+	Part string `json:"p,omitempty"`
+	Text string `json:"t"`
+}
+
 // pending is what has been taken in and not yet sent: whatever earlier runs held, in the order they
 // held it.
 type pending struct {
 	// path is where the messages are kept, empty when there is nowhere to keep them.
 	path     string
-	messages []string
+	messages []line
 }
 
 // held reads what is owed. A file that cannot be read comes back empty rather than refusing the run —
@@ -80,9 +119,9 @@ func held() pending {
 		return pending{}
 	}
 	owed := pending{path: path}
-	for _, line := range readLines(path) {
-		var message string
-		if err := json.Unmarshal([]byte(line), &message); err != nil {
+	for _, held := range readLines(path) {
+		message, err := readHeld(held)
+		if err != nil {
 			// A line this plugin cannot read is one it cannot send; dropping it loses one
 			// message, while stopping here would lose every message behind it too.
 			logf("slack: skipping a held message that will not parse: %v", err)
@@ -93,6 +132,25 @@ func held() pending {
 	return owed
 }
 
+// readHeld reads one held line, in either of the two shapes the file has had: an object saying which
+// part it belongs in, and the bare string a build before the parts wrote. The older shape is read
+// rather than dropped — what it holds is a message someone is still owed, and the part it lacks is
+// the one that came first anyway.
+func readHeld(held string) (line, error) {
+	if strings.HasPrefix(strings.TrimSpace(held), "\"") {
+		var text string
+		if err := json.Unmarshal([]byte(held), &text); err != nil {
+			return line{}, err
+		}
+		return line{Text: text}, nil
+	}
+	var message line
+	if err := json.Unmarshal([]byte(held), &message); err != nil {
+		return line{}, err
+	}
+	return message, nil
+}
+
 // durable says whether what is held will survive this run. Where there is nowhere to write, holding
 // a message would mean carrying it in a process that is about to end — so nothing is held back at
 // all, and every event is its own message.
@@ -100,9 +158,9 @@ func (p pending) durable() bool {
 	return p.path != ""
 }
 
-// add puts one message at the end of what is owed.
-func (p *pending) add(message string) {
-	p.messages = append(p.messages, message)
+// add puts one message at the end of what is owed, in the part of the message it belongs in.
+func (p *pending) add(part, message string) {
+	p.messages = append(p.messages, line{Part: part, Text: message})
 }
 
 // loosen gives up keeping what is owed: nothing will be held back, so every message goes out as it
@@ -141,11 +199,11 @@ func (p *pending) save() error {
 	p.bound()
 	lines := make([]string, 0, len(p.messages))
 	for _, message := range p.messages {
-		line, err := json.Marshal(message)
+		held, err := json.Marshal(message)
 		if err != nil {
 			return fmt.Errorf("holding a message for the rest of the queue: %w", err)
 		}
-		lines = append(lines, string(line))
+		lines = append(lines, string(held))
 	}
 	if err := writeWhole(p.path, lines); err != nil {
 		return fmt.Errorf("holding a message for the rest of the queue: %w", err)
@@ -153,9 +211,32 @@ func (p *pending) save() error {
 	return nil
 }
 
-// text is everything owed as one message: one line each, in the order they happened.
+// text is everything owed as one message: one line each, laid out in parts and separated by a blank
+// line. Within a part the lines are in the order they were taken in, which for what the AI did is the
+// order it happened in.
 func (p pending) text() string {
-	return strings.Join(p.messages, "\n")
+	var blocks []string
+	for _, part := range partOrder {
+		var lines []string
+		for _, message := range p.messages {
+			if message.part() == part {
+				lines = append(lines, message.Text)
+			}
+		}
+		if len(lines) > 0 {
+			blocks = append(blocks, strings.Join(lines, "\n"))
+		}
+	}
+	return strings.Join(blocks, "\n\n")
+}
+
+// part is where a line is laid out, reading a part this build does not know as the first one so that
+// the line is still in the message.
+func (l line) part() string {
+	if slices.Contains(partOrder, l.Part) {
+		return l.Part
+	}
+	return partActs
 }
 
 // clear forgets what is owed, once it has gone out.

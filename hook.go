@@ -22,10 +22,12 @@ const (
 	eventDecisionRejected = "decision.rejected"
 	eventCommentAdded     = "comment.added"
 	eventCommentRemoved   = "comment.removed"
+	eventTaskDue          = "task.due"
+	eventTaskDueTomorrow  = "task.due_tomorrow"
 )
 
 // catalog is that list, and a test holds it against the manifest — the events subscribed to and
-// the answers offered are the same eleven, or an option is a choice that reports nothing.
+// the answers offered are the same thirteen, or an option is a choice that reports nothing.
 var catalog = []string{
 	eventTaskCreated,
 	eventStatusChanged,
@@ -38,12 +40,37 @@ var catalog = []string{
 	eventDecisionRejected,
 	eventCommentAdded,
 	eventCommentRemoved,
+	eventTaskDue,
+	eventTaskDueTomorrow,
 }
 
 // defaultEvents is what a channel gets while nobody has said otherwise: a task appeared, its
-// status moved, and either terminal — the shape of "what happened while I was away". The manifest
-// declares the same four as the setting's default, and a test holds those together too.
-var defaultEvents = []string{eventTaskCreated, eventStatusChanged, eventTaskDone, eventTaskRejected}
+// status moved, either terminal, and a due date that arrived — the shape of "what happened while I
+// was away". The manifest declares the same six as the setting's default, and a test holds those
+// together too.
+//
+// The due dates are in it for the same reason amenbo keeps no quiet hours of its own: a
+// notification nobody opted into is one the user finds out about by missing a deadline first. They
+// are also the only events here that fire while nothing at all is being done, which is exactly when
+// nobody is looking at the app.
+var defaultEvents = []string{
+	eventTaskCreated,
+	eventStatusChanged,
+	eventTaskDone,
+	eventTaskRejected,
+	eventTaskDue,
+	eventTaskDueTomorrow,
+}
+
+// unattended is the events nobody drove. Every other one names the party who wrote — and only the
+// AI's are reported, a write the user drove being one they were present for. A due date is not a
+// write at all: no one touched the store, the day simply came, and it comes while nobody is looking
+// at the app, which is when a channel is worth having. So these pass the actor gate rather than
+// being caught by it — they carry no actor to be caught on.
+var unattended = map[string]bool{
+	eventTaskDue:         true,
+	eventTaskDueTomorrow: true,
+}
 
 // eventsSetting is the key the choice arrives under. It is not a secret, so it comes in the
 // `config` object on stdin rather than in the environment.
@@ -56,7 +83,8 @@ const eventsSetting = "events"
 // a failure — a document from a contract this plugin cannot read, a write the user drove themselves,
 // an event the user did not ask to hear about, and an event already taken in are all events with
 // nothing to add. What is added is written down before anything else happens, so a launch that does
-// not come back has not swallowed it.
+// not come back has not swallowed it, and it is written down under the part of the message it
+// belongs in: what the AI did reads as it happened, and the due dates are laid out apart from it.
 //
 // **Sending what is owed.** This is the runner's question, not the event's: while anything is still
 // queued for this plugin, the lines wait; when nothing is, they go out as one message. Which is why
@@ -91,7 +119,7 @@ func hook(in input) error {
 			// taken in, which is the moment it describes.
 			var how preferences
 			how, wordErr = readPreferences()
-			batch.add(sentence(how, in, about))
+			batch.add(partOf(in.Event), sentence(how, in, about))
 			// Nothing from here on may stop the send. A store that cannot be written is a
 			// fault worth a failed run, but holding a line back on account of it would mean
 			// carrying it in a process that is about to end — so the batching is what gives
@@ -157,10 +185,17 @@ func heading() (string, error) {
 	return "*" + name + "*\n", nil
 }
 
-// reportable says whether this event becomes a line: one this plugin can read, driven by the AI, and
-// asked for.
+// reportable says whether this event becomes a line: one this plugin can read, nobody's to keep
+// quiet about, and asked for.
 func reportable(in input) bool {
-	return in.V == contractVersion && in.Actor == actorAI && selected(in)[in.Event]
+	return in.V == contractVersion && worthSaying(in) && selected(in)[in.Event]
+}
+
+// worthSaying is the actor gate: the AI's writes are reported and the user's own are not, since
+// they were there for them. What it lets past unasked is the events nobody drove — a due date
+// arriving is nobody's write to have been present for (see [unattended]).
+func worthSaying(in input) bool {
+	return unattended[in.Event] || in.Actor == actorAI
 }
 
 // readFailure is what a run ends on when the record behind a line could not be read: the line was

@@ -341,10 +341,10 @@ func TestWhatIsHeldStopsAtItsBound(t *testing.T) {
 		t.Fatalf("the hold should stop at %d lines, got %d", heldAtMost, len(owed.messages))
 	}
 	// Ten more were taken in than fit, so the ten oldest are the ones gone.
-	if first, want := owed.messages[0], "AI created AMB-T-42 — title 11"; first != want {
+	if first, want := owed.messages[0].Text, "AI created AMB-T-42 — title 11"; first != want {
 		t.Errorf("the oldest lines should fall off the front, got %q", first)
 	}
-	if last, want := owed.messages[len(owed.messages)-1], fmt.Sprintf("AI created AMB-T-42 — title %d", heldAtMost+10); last != want {
+	if last, want := owed.messages[len(owed.messages)-1].Text, fmt.Sprintf("AI created AMB-T-42 — title %d", heldAtMost+10); last != want {
 		t.Errorf("the newest line should still be held, got %q", last)
 	}
 	if !strings.Contains(stderr.String(), "dropped") {
@@ -366,7 +366,7 @@ func TestNothingIsDroppedWhileWhatIsHeldFits(t *testing.T) {
 	if len(owed.messages) != heldAtMost {
 		t.Fatalf("everything held should still be there, got %d lines", len(owed.messages))
 	}
-	if first, want := owed.messages[0], "AI created AMB-T-42 — title 1"; first != want {
+	if first, want := owed.messages[0].Text, "AI created AMB-T-42 — title 1"; first != want {
 		t.Errorf("the first line taken in should still be held, got %q", first)
 	}
 	if stderr.Len() != 0 {
@@ -439,5 +439,90 @@ func TestAHeldMessageSurvivesANewlineInATitle(t *testing.T) {
 	}
 	if lines := strings.Count((*posted)[0], "\n"); lines != 3 {
 		t.Errorf("two messages of two lines each is three breaks, got %d: %q", lines, (*posted)[0])
+	}
+}
+
+// eachTask stands in for an amenbo answering every read with the record that was asked for, so the
+// lines in a batch can be told apart by the task they name.
+func eachTask(t *testing.T) {
+	t.Helper()
+	previous := runAmenbo
+	runAmenbo = func(args ...string) ([]byte, error) {
+		if len(args) > 0 && args[0] == "config" {
+			return []byte(englishStore), nil
+		}
+		return []byte(fmt.Sprintf(`{"ref":"AMB-T-%s","title":"task %s"}`, args[2], args[2])), nil
+	}
+	t.Cleanup(func() { runAmenbo = previous })
+}
+
+// A tick names every task whose day has come, so a message can carry a dozen of them at once. The
+// two kinds are laid out apart — what is already standing before what arrives tomorrow — rather than
+// interleaved in the order the runner happened to deliver them, and what the AI did stays at the top
+// where it reads as it happened.
+func TestTheTwoKindsOfDueDateAreLaidOutApart(t *testing.T) {
+	remembers(t)
+	posted := slackStands(t)
+	eachTask(t)
+
+	behind(t, 3)
+	for _, in := range []input{
+		aiAbout(eventTaskCreated, 1),
+		dayCame(eventTaskDue, 2),
+		dayCame(eventTaskDueTomorrow, 3),
+	} {
+		if err := hook(in); err != nil {
+			t.Fatal(err)
+		}
+	}
+	behind(t, 0)
+	if err := hook(dayCame(eventTaskDue, 4)); err != nil {
+		t.Fatal(err)
+	}
+
+	want := strings.Join([]string{
+		"AI created AMB-T-1 — task 1",
+		"",
+		"AMB-T-2 is due — task 2",
+		"AMB-T-4 is due — task 4",
+		"",
+		"AMB-T-3 is due tomorrow — task 3",
+	}, "\n")
+	if len(*posted) != 1 || (*posted)[0] != want {
+		t.Errorf("want:\n%q\ngot:\n%v", want, *posted)
+	}
+}
+
+// aiAbout is one write the AI drove, about the task with this id.
+func aiAbout(event string, id int64) input {
+	in := aiWrite(event)
+	in.ID = id
+	return in
+}
+
+// A build before the parts held its lines as bare strings. They are still owed to somebody, so they
+// are read rather than dropped, and they land where the lines that came before the parts belong.
+func TestALineHeldBeforeThePartsStillGoesOut(t *testing.T) {
+	home := remembers(t)
+	posted := slackStands(t)
+	eachTask(t)
+
+	dir := stateDir(home, oneProject)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	older := "\"AI created AMB-T-9 — held before the parts\"\n"
+	if err := os.WriteFile(filepath.Join(dir, pendingFile), []byte(older), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	behind(t, 0)
+	if err := hook(dayCame(eventTaskDue, 4)); err != nil {
+		t.Fatal(err)
+	}
+
+	want := "AI created AMB-T-9 — held before the parts\n\nAMB-T-4 is due — task 4"
+	if len(*posted) != 1 || (*posted)[0] != want {
+		t.Errorf("want:\n%q\ngot:\n%v", want, *posted)
 	}
 }

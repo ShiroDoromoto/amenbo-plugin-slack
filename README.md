@@ -1,6 +1,7 @@
 # slack — amenbo's official Slack notification plugin
 
-Report to a Slack channel what your AI did in a project while you were away from it.
+Report to a Slack channel what your AI did in a project while you were away from it, and which
+tasks have run out of days.
 
 ```
 *amenbo-plugin-slack*
@@ -11,16 +12,18 @@ AI finished AMB-T-42 — Ship the thing
 
 Three things decide what arrives.
 
-- **Only the AI's writes.** Every event names who drove it, and a write you drove yourself is
-  one you were present for — a channel repeating it back to you is noise. What is worth a
-  notification is the work that happened while nobody was watching it.
+- **Only the AI's writes, and the days nobody wrote.** Every event names who drove it, and a write
+  you drove yourself is one you were present for — a channel repeating it back to you is noise. What
+  is worth a notification is what happened while nobody was watching: the AI's work, and a due date
+  arriving, which is nobody's write at all.
 - **The channel is the setting.** `webhook_url` is a secret setting, and a setting belongs to a
   project, so the value itself is which channel a project reports to. Point two projects at two
   webhooks and they report to two channels; there is no channel name anywhere in the plugin. And
   every message says which project it came from, so pointing two of them at one channel still
   reads.
 - **Which events, you choose.** `events` is a list you tick, from everything amenbo fires. Its
-  default is the four above, and both the choice and the channel are answered per project.
+  default is the four above plus the two due dates, and both the choice and the channel are answered
+  per project.
 
 ## Use
 
@@ -92,7 +95,7 @@ out, and the run ends non-zero so the reason is in `amenbo plugin log slack`.
 
 ### What can be reported
 
-Every event amenbo fires is on offer, and each one has its own sentence — one line. The four in
+Every event amenbo fires is on offer, and each one has its own sentence — one line. The six in
 **bold** are what a channel gets until you say otherwise.
 
 | Event | The message |
@@ -108,6 +111,8 @@ Every event amenbo fires is on offer, and each one has its own sentence — one 
 | `decision.rejected` | `<AI> rejected <decision>` |
 | `comment.added` | `<AI> added a comment on <task>` |
 | `comment.removed` | `<AI> took back a comment on <task>` |
+| **`task.due`** | `<task> is due` |
+| **`task.due_tomorrow`** | `<task> is due tomorrow` |
 
 `<task>` and `<decision>` are the record's ref and its title, read back from the store. One of them
 cannot be: a **deleted** task is gone, so its title comes off the vanished record the event carries
@@ -117,6 +122,37 @@ that task falls back to naming the comment by its number.
 
 `<AI>` and `<who>` are the names your AI and you go by, and the sentences above are the English
 ones — all of it is read back from amenbo too. See below.
+
+### The two that nobody did
+
+The last two rows have no `<AI>` in them, and that is the whole of what makes them different. A due
+date is not something anyone wrote: the day came. So the rule above — only the AI's writes — has
+nothing to catch there, and it is the same rule that says they belong in the channel, since a day
+arriving is the event nobody is at the desk for.
+
+They are amenbo's own, not this plugin's. Something in the machine's schedule wakes amenbo up, it
+reads the due dates against that machine's calendar day, and it fires one event per task, once a day
+— `task.due` for what is due today or already past, `task.due_tomorrow` for what has one day left.
+The two are the red and the yellow of the app's own chips, so a channel and a screen never disagree
+about which a task is in. There is no hour to choose and none to guess at, and a task left open is
+named again the next day.
+
+A day can name a dozen tasks at once, so a message keeps the two kinds apart rather than
+interleaving them in whatever order they were delivered:
+
+```
+*amenbo-plugin-slack*
+AI finished AMB-T-42 — Ship the thing
+
+AMB-T-9 is due — Renew the certificate
+AMB-T-11 is due — Pay the invoice
+
+AMB-T-12 is due tomorrow — Book the room
+```
+
+What was done comes first and reads in the order it happened; then what is already standing, then
+what arrives tomorrow. Being quiet at night is the channel's own business — Slack has a Do Not
+Disturb, and amenbo does not override it by holding a notification until morning.
 
 ### The language a message is in
 
@@ -159,9 +195,10 @@ the run ending non-zero so the reason is in the log.
 
 ### A burst arrives as one message
 
-Deleting a project, or clearing a pile of tasks, fires tens of events in a moment — and to you that
-was one act. So a line waits while amenbo says anything is still queued for this project, and the run
-that sees nothing behind it sends everything waiting as one message:
+Deleting a project, clearing a pile of tasks, or a day's due dates coming round, fires tens of events
+in a moment — and to you that was one act, or no act at all. So a line waits while amenbo says
+anything is still queued for this project, and the run that sees nothing behind it sends everything
+waiting as one message:
 
 ```
 *amenbo-plugin-slack*
@@ -189,7 +226,7 @@ moment and neither holds the other's lines back.
 | key | what it does |
 |---|---|
 | `webhook_url` | The Slack [incoming webhook](https://api.slack.com/messaging/webhooks) to post to. Secret, and required — a plugin with nowhere to post does nothing, so `enable` is refused until it holds a value. |
-| `events` | What to report, ticked from the table above. Defaults to the four in bold. |
+| `events` | What to report, ticked from the table above. Defaults to the six in bold. |
 
 ```sh
 amenbo plugin config set slack events task.done,task.rejected     # only the terminals

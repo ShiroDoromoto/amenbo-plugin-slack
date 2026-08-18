@@ -511,3 +511,69 @@ func TestARunWithNoProjectNamedSendsNoHeading(t *testing.T) {
 		t.Errorf("nothing should be put at the top, got %v", *posted)
 	}
 }
+
+// dayCame is the payload for a due date arriving. It is the one event this plugin reports that
+// nobody drove, so it names no actor at all — there is no one to have been present for it.
+func dayCame(event string, id int64) input {
+	return input{V: contractVersion, Event: event, ID: id}
+}
+
+// A due date is not a write, so the gate that keeps the user's own writes out of the channel does
+// not keep it out either: the day came while nobody was at the desk, which is exactly what a channel
+// is for.
+func TestHookReportsADueDateNobodyDrove(t *testing.T) {
+	posted := slackStands(t)
+	readsBack(t, "AMB-T-42", "Ship the thing")
+
+	if err := hook(dayCame(eventTaskDue, 42)); err != nil {
+		t.Fatal(err)
+	}
+
+	want := "AMB-T-42 is due — Ship the thing"
+	if len(*posted) != 1 || (*posted)[0] != want {
+		t.Errorf("want %q, got %v", want, *posted)
+	}
+}
+
+// The other kind says which day it is about, so the two are told apart by the line and not only by
+// where it sits.
+func TestADueDateTomorrowSaysSo(t *testing.T) {
+	posted := slackStands(t)
+	readsBack(t, "AMB-T-42", "Ship the thing")
+
+	if err := hook(dayCame(eventTaskDueTomorrow, 42)); err != nil {
+		t.Fatal(err)
+	}
+
+	want := "AMB-T-42 is due tomorrow — Ship the thing"
+	if len(*posted) != 1 || (*posted)[0] != want {
+		t.Errorf("want %q, got %v", want, *posted)
+	}
+}
+
+// A due date the user did not ask to hear about is as silent as any other event: nothing about being
+// unattended puts it past the choice.
+func TestADueDateIsStillOnlyReportedIfItWasAskedFor(t *testing.T) {
+	posted := slackStands(t)
+	readsBack(t, "AMB-T-42", "Ship the thing")
+
+	in := dayCame(eventTaskDue, 42)
+	in.Config = map[string]any{eventsSetting: eventTaskDone}
+	if err := hook(in); err != nil {
+		t.Fatal(err)
+	}
+
+	if len(*posted) != 0 {
+		t.Errorf("an event nobody asked for should be silent, got %v", *posted)
+	}
+}
+
+// Both kinds are reported until the user says otherwise: a notification nobody opted into is one
+// they find out about by missing a deadline first.
+func TestADueDateIsReportedUntilTheUserSaysOtherwise(t *testing.T) {
+	for _, event := range []string{eventTaskDue, eventTaskDueTomorrow} {
+		if !setOf(defaultEvents)[event] {
+			t.Errorf("%s should be in what a channel gets by default", event)
+		}
+	}
+}

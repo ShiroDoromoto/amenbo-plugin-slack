@@ -13,7 +13,9 @@
 //
 //   - **Only the AI's writes.** The payload names who drove the write, and a write the user
 //     drove is one they were present for — a channel that repeats it back is noise. What is
-//     worth a notification is the work that happened while they were away from the desk.
+//     worth a notification is the work that happened while they were away from the desk. A due
+//     date arriving is nobody's write, so it is reported for the same reason rather than filtered
+//     out by it: nobody was at the desk at all.
 //   - **The channel is the setting.** `webhook_url` is a secret setting, and a setting
 //     belongs to a project, so the value itself is which channel a project reports to.
 //     There is nothing else to configure and no channel name anywhere in this code.
@@ -189,11 +191,13 @@ func usage() {
 
 This plugin is mostly not called. amenbo starts it when an event fires, and it reports the event as
 one line, under a heading naming the project it came from. Lines wait while amenbo says more events
-are queued, so a burst — a project deleted, a pile cleared — arrives as one message rather than tens.
+are queued, so a burst — a project deleted, a pile cleared, a day's due dates — arrives as one
+message rather than tens, with the due dates laid out apart from what was done.
 
-Only the writes an AI drove are reported: the ones you drove yourself, you were there for.
-Which of them reach the channel is yours to choose — by default a task created, its status
-moved, and either terminal (done or decided against).
+Only the writes an AI drove are reported: the ones you drove yourself, you were there for. Due
+dates are reported too — a day arriving is nobody's write, and it arrives while nobody is
+looking. Which of them reach the channel is yours to choose — by default a task created, its
+status moved, either terminal (done or decided against), and a due date reached or one day out.
 
 A message is written in the language amenbo is set to, and its subject is the name you gave your
 AI. Neither is a setting here — both are read back from amenbo, and a language this build has no
@@ -201,7 +205,7 @@ wording for is reported in English.
 
 Settings:
   webhook_url   the Slack incoming webhook to post to (secret, required)
-  events        what to report, from the eleven amenbo fires (defaults to the four above;
+  events        what to report, from the thirteen amenbo fires (defaults to the six above;
                 choosing none is honoured, and reports nothing)
 
 The setting belongs to a project, so the value is which channel that project reports to.
