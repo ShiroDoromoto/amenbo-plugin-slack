@@ -1,7 +1,7 @@
-// Command slack is amenbo's official Slack plugin: it reports to a Slack channel what the
+// Command slack is Amenbo's official Slack plugin: it reports to a Slack channel what the
 // user's AI did in a project while nobody was watching it.
 //
-// Its face is the observation hook. amenbo fires it with NO arguments and the event's JSON on
+// Its face is the observation hook. Amenbo fires it with NO arguments and the event's JSON on
 // stdin, nobody is waiting for the answer, and what it does with the event is send one message.
 //
 // Two calls stand beside it, and neither is a verb invented for a terminal: they are what the
@@ -21,7 +21,7 @@
 //     There is nothing else to configure and no channel name anywhere in this code.
 //
 // A payload carries an id, never the record, so the title in a message is read back by
-// running `amenbo task show <id> --json`. amenbo names the store and the window it may be
+// running `amenbo task show <id> --json`. Amenbo names the store and the window it may be
 // read through in the environment; this plugin passes neither on and adds nothing of its own.
 // The window is also who the message is from: the project it names is what a message leads
 // with, and what tells one project's held lines from another's.
@@ -37,7 +37,7 @@ import (
 	"strings"
 )
 
-// contractVersion is the payload contract this plugin reads. amenbo leads every document it
+// contractVersion is the payload contract this plugin reads. Amenbo leads every document it
 // writes with `v` and raises it only on a breaking change — new fields are added silently —
 // so a document announcing a different version is one this plugin must not guess at.
 const contractVersion = 1
@@ -49,22 +49,22 @@ const (
 	actorHuman = "human"
 )
 
-// pluginName is what amenbo knows this plugin as: its manifest's name, its installed directory, and
+// pluginName is what Amenbo knows this plugin as: its manifest's name, its installed directory, and
 // the word a user types after `plugin`. One spelling, so what is written under it is found again.
 const pluginName = "slack"
 
-// storeEnv names the store amenbo is working — the base directory it handed over on launch, which is
+// storeEnv names the store Amenbo is working — the base directory it handed over on launch, which is
 // also where this plugin's own installed directory sits.
 const storeEnv = "AMENBO_HOME"
 
-// webhookEnv carries the `webhook_url` setting. It is declared secret, so amenbo puts it in
+// webhookEnv carries the `webhook_url` setting. It is declared secret, so Amenbo puts it in
 // the environment rather than in the `config` object on stdin, under the name its key
 // mechanically becomes.
 const webhookEnv = "AMENBO_CONFIG_WEBHOOK_URL"
 
 // out and errOut are the plugin's two channels, indirected so the tests can read what was
 // written to each. A hook's stdout is not a return value, but the split still holds: nothing
-// a person reads belongs anywhere but stderr, which is where amenbo's execution log looks
+// a person reads belongs anywhere but stderr, which is where Amenbo's execution log looks
 // when a run has to explain itself.
 var (
 	out    io.Writer = os.Stdout
@@ -76,9 +76,9 @@ func logf(format string, a ...any) {
 	fmt.Fprintf(errOut, format+"\n", a...)
 }
 
-// input is the JSON document amenbo writes to the plugin's stdin. Unknown keys are ignored —
+// input is the JSON document Amenbo writes to the plugin's stdin. Unknown keys are ignored —
 // the contract grows by addition, so a plugin that refused them would break on the next
-// amenbo.
+// Amenbo.
 type input struct {
 	// V is the contract version the document is written to.
 	V int `json:"v"`
@@ -99,11 +99,11 @@ type input struct {
 	// record's own columns.
 	Record map[string]any `json:"record"`
 	// Parent is what a child record hangs on, by number — the task of a comment, added or
-	// taken back. Nil on every event that has no parent, and on an older amenbo that carried
+	// taken back. Nil on every event that has no parent, and on an older Amenbo that carried
 	// none for one that does.
 	Parent *int64 `json:"parent"`
 	// Config holds the plugin's own non-secret settings, as the user filled them in. Secrets
-	// never appear here: amenbo puts those in the environment instead.
+	// never appear here: Amenbo puts those in the environment instead.
 	Config map[string]any `json:"config"`
 }
 
@@ -114,9 +114,9 @@ func (in input) recordField(key string) string {
 	return strings.TrimSpace(text)
 }
 
-// readInput reads the document amenbo feeds on stdin.
+// readInput reads the document Amenbo feeds on stdin.
 //
-// amenbo always writes one and closes the pipe, so the read finishes promptly. A hand run
+// Amenbo always writes one and closes the pipe, so the read finishes promptly. A hand run
 // from a terminal is fed nothing at all, and waiting for a person to type JSON would hang
 // the plugin on `slack help` — so an interactive stdin is skipped rather than read. A
 // document that will not parse is reported and dropped: nobody is waiting on the answer, and
@@ -141,7 +141,7 @@ func main() {
 	in := readInput(os.Stdin)
 	args := os.Args[1:]
 
-	// No arguments is the observation face — amenbo fired us for an event.
+	// No arguments is the observation face — Amenbo fired us for an event.
 	if len(args) == 0 {
 		do(hook(in))
 		return
@@ -177,7 +177,7 @@ func declaredFaces() string {
 }
 
 // do ends the run on the verdict the exit code carries. A hook's failure reaches nobody who
-// was listening, so the exit code is what puts it in amenbo's execution log, beside the
+// was listening, so the exit code is what puts it in Amenbo's execution log, beside the
 // stderr that says why.
 func do(err error) {
 	if err != nil {
@@ -187,10 +187,10 @@ func do(err error) {
 }
 
 func usage() {
-	logf(`slack — amenbo's official plugin: report your AI's writes to a Slack channel
+	logf(`slack — Amenbo's official plugin: report your AI's writes to a Slack channel
 
-This plugin is mostly not called. amenbo starts it when an event fires, and it reports the event as
-one line, under a heading naming the project it came from. Lines wait while amenbo says more events
+This plugin is mostly not called. Amenbo starts it when an event fires, and it reports the event as
+one line, under a heading naming the project it came from. Lines wait while Amenbo says more events
 are queued, so a burst — a project deleted, a pile cleared, a day's due dates — arrives as one
 message rather than tens, with the due dates laid out apart from what was done.
 
@@ -199,13 +199,13 @@ dates are reported too — a day arriving is nobody's write, and it arrives whil
 looking. Which of them reach the channel is yours to choose — by default a task created, its
 status moved, either terminal (done or decided against), and a due date reached or one day out.
 
-A message is written in the language amenbo is set to, and its subject is the name you gave your
-AI. Neither is a setting here — both are read back from amenbo, and a language this build has no
+A message is written in the language Amenbo is set to, and its subject is the name you gave your
+AI. Neither is a setting here — both are read back from Amenbo, and a language this build has no
 wording for is reported in English.
 
 Settings:
   webhook_url   the Slack incoming webhook to post to (secret, required)
-  events        what to report, from the thirteen amenbo fires (defaults to the six above;
+  events        what to report, from the thirteen Amenbo fires (defaults to the six above;
                 choosing none is honoured, and reports nothing)
 
 The setting belongs to a project, so the value is which channel that project reports to.

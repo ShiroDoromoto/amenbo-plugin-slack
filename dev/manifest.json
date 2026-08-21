@@ -1,7 +1,7 @@
 {
   "name": "slack",
   "desc": "Report what your AI did to a Slack channel",
-  "author": "amenbo",
+  "author": "Amenbo",
   "repo": "ShiroDoromoto/amenbo-plugin-slack",
   "os": ["macos", "windows", "linux"],
   "category": "notification",
@@ -39,7 +39,7 @@
       "label": "Slack webhook URL",
       "secret": true,
       "required": true,
-      "help": "Slack makes this, not amenbo, and the URL is the channel: a webhook for the wrong channel posts to the wrong room with nothing else set wrong.\nAt api.slack.com/apps, create an app in the workspace that should hear about this project, turn on Incoming Webhooks, add one to the channel it should post to, and copy the URL it hands back.\nIt is held as a secret — it never leaves amenbo into an export, a log, or a read-back.",
+      "help": "Slack makes this, not Amenbo, and the URL is the channel: a webhook for the wrong channel posts to the wrong room with nothing else set wrong.\nAt api.slack.com/apps, create an app in the workspace that should hear about this project, turn on Incoming Webhooks, add one to the channel it should post to, and copy the URL it hands back.\nIt is held as a secret — it never leaves Amenbo into an export, a log, or a read-back.",
       "placeholder": "https://hooks.slack.com/services/T…/B…/…"
     },
     {

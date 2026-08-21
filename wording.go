@@ -6,7 +6,7 @@ import "strings"
 // decides *whether* there is a line and *which record* it is about; the words themselves live here,
 // once per language, so adding a language is adding a row and nothing else.
 //
-// The store is what settles which row is read. amenbo already knows the language the user reads in
+// The store is what settles which row is read. Amenbo already knows the language the user reads in
 // and the name their AI goes by, so this plugin asks rather than answers, and keeps no language
 // setting of its own — one question, answered once, in the place the user already answered it
 // (see readPreferences).
@@ -57,17 +57,17 @@ type wording struct {
 	// that no event produces — a person pressed a button — but it lands in the same channel as
 	// every other, so it is worded here rather than left in the language the author writes in.
 	test string
-	// statuses is amenbo's own word for each state a task can be in. A channel that invented its
+	// statuses is Amenbo's own word for each state a task can be in. A channel that invented its
 	// own would be naming a state the user cannot find in the app, so these are taken from
-	// amenbo's dictionary rather than translated afresh.
+	// Amenbo's dictionary rather than translated afresh.
 	statuses map[string]string
 }
 
-// wordings is every language this build can write a line in, keyed by amenbo's language code and
-// ordered by it. All nineteen amenbo offers are here — the code has to be spelled the way the store
+// wordings is every language this build can write a line in, keyed by Amenbo's language code and
+// ordered by it. All nineteen Amenbo offers are here — the code has to be spelled the way the store
 // spells it, `pt-BR` and not `pt-br`, or the row is one nothing ever reads.
 //
-// The statuses are not translated here: they are amenbo's own words, taken from its dictionary, so
+// The statuses are not translated here: they are Amenbo's own words, taken from its dictionary, so
 // that a state reads the same in a channel as in the app the reader would go and look it up in. The
 // sentences around them are this file's.
 //
@@ -93,7 +93,7 @@ var wordings = map[string]wording{
 			eventTaskDueTomorrow:  {bare: "{what} ist morgen fällig"},
 		},
 		unknown: "{who} hat etwas an {what} gemacht ({event})",
-		test:    "Testnachricht von amenbo — dieses Projekt meldet hierher.",
+		test:    "Testnachricht von Amenbo — dieses Projekt meldet hierher.",
 		statuses: map[string]string{
 			"todo":        "Offen",
 			"in_progress": "In Arbeit",
@@ -119,7 +119,7 @@ var wordings = map[string]wording{
 			eventTaskDueTomorrow:  {bare: "{what} is due tomorrow"},
 		},
 		unknown: "{who} acted on {what} ({event})",
-		test:    "Test message from amenbo — this project reports here.",
+		test:    "Test message from Amenbo — this project reports here.",
 		statuses: map[string]string{
 			"todo":        "To do",
 			"in_progress": "In progress",
@@ -145,7 +145,7 @@ var wordings = map[string]wording{
 			eventTaskDueTomorrow:  {bare: "El plazo de {what} es mañana"},
 		},
 		unknown: "{who} hizo algo en {what} ({event})",
-		test:    "Mensaje de prueba de amenbo: este proyecto informa aquí.",
+		test:    "Mensaje de prueba de Amenbo: este proyecto informa aquí.",
 		statuses: map[string]string{
 			"todo":        "Pendiente",
 			"in_progress": "En curso",
@@ -171,7 +171,7 @@ var wordings = map[string]wording{
 			eventTaskDueTomorrow:  {bare: "L'échéance de {what} est demain"},
 		},
 		unknown: "{who} est intervenu sur {what} ({event})",
-		test:    "Message de test d'amenbo — ce projet rend compte ici.",
+		test:    "Message de test d'Amenbo — ce projet rend compte ici.",
 		statuses: map[string]string{
 			"todo":        "À faire",
 			"in_progress": "En cours",
@@ -197,7 +197,7 @@ var wordings = map[string]wording{
 			eventTaskDueTomorrow:  {bare: "{what} की समय-सीमा कल है"},
 		},
 		unknown: "{who} ने {what} पर कुछ किया ({event})",
-		test:    "amenbo से परीक्षण संदेश — यह प्रोजेक्ट यहीं बताएगा।",
+		test:    "Amenbo से परीक्षण संदेश — यह प्रोजेक्ट यहीं बताएगा।",
 		statuses: map[string]string{
 			"todo":        "करना है",
 			"in_progress": "चल रहा है",
@@ -223,7 +223,7 @@ var wordings = map[string]wording{
 			eventTaskDueTomorrow:  {bare: "{what} jatuh tempo besok"},
 		},
 		unknown: "{who} melakukan sesuatu pada {what} ({event})",
-		test:    "Pesan uji dari amenbo — proyek ini melapor ke sini.",
+		test:    "Pesan uji dari Amenbo — proyek ini melapor ke sini.",
 		statuses: map[string]string{
 			"todo":        "Akan dikerjakan",
 			"in_progress": "Sedang dikerjakan",
@@ -249,7 +249,7 @@ var wordings = map[string]wording{
 			eventTaskDueTomorrow:  {bare: "{what} scade domani"},
 		},
 		unknown: "{who} è intervenuto su {what} ({event})",
-		test:    "Messaggio di prova da amenbo — questo progetto riferisce qui.",
+		test:    "Messaggio di prova da Amenbo — questo progetto riferisce qui.",
 		statuses: map[string]string{
 			"todo":        "Da fare",
 			"in_progress": "In corso",
@@ -275,7 +275,7 @@ var wordings = map[string]wording{
 			eventTaskDueTomorrow:  {bare: "{what} は明日が期日です"},
 		},
 		unknown: "{who} が {what} に対して操作しました（{event}）",
-		test:    "amenbo からのテスト送信です。このプロジェクトはここへ報告します。",
+		test:    "Amenbo からのテスト送信です。このプロジェクトはここへ報告します。",
 		statuses: map[string]string{
 			"todo":        "未着手",
 			"in_progress": "進行中",
@@ -301,7 +301,7 @@ var wordings = map[string]wording{
 			eventTaskDueTomorrow:  {bare: "{what}의 기한이 내일입니다"},
 		},
 		unknown: "{who}이(가) {what}에 무언가 했습니다 ({event})",
-		test:    "amenbo에서 보낸 테스트 메시지입니다. 이 프로젝트는 여기로 보고합니다.",
+		test:    "Amenbo에서 보낸 테스트 메시지입니다. 이 프로젝트는 여기로 보고합니다.",
 		statuses: map[string]string{
 			"todo":        "할 일",
 			"in_progress": "진행 중",
@@ -327,7 +327,7 @@ var wordings = map[string]wording{
 			eventTaskDueTomorrow:  {bare: "De deadline van {what} is morgen"},
 		},
 		unknown: "{who} heeft iets met {what} gedaan ({event})",
-		test:    "Testbericht van amenbo — dit project meldt hier.",
+		test:    "Testbericht van Amenbo — dit project meldt hier.",
 		statuses: map[string]string{
 			"todo":        "Te doen",
 			"in_progress": "Bezig",
@@ -353,7 +353,7 @@ var wordings = map[string]wording{
 			eventTaskDueTomorrow:  {bare: "Termin {what} przypada jutro"},
 		},
 		unknown: "{who} zrobił(a) coś z {what} ({event})",
-		test:    "Wiadomość testowa z amenbo — ten projekt raportuje tutaj.",
+		test:    "Wiadomość testowa z Amenbo — ten projekt raportuje tutaj.",
 		statuses: map[string]string{
 			"todo":        "Do zrobienia",
 			"in_progress": "W toku",
@@ -379,7 +379,7 @@ var wordings = map[string]wording{
 			eventTaskDueTomorrow:  {bare: "O prazo de {what} é amanhã"},
 		},
 		unknown: "{who} fez algo em {what} ({event})",
-		test:    "Mensagem de teste do amenbo — este projeto reporta aqui.",
+		test:    "Mensagem de teste do Amenbo — este projeto reporta aqui.",
 		statuses: map[string]string{
 			"todo":        "A fazer",
 			"in_progress": "Em andamento",
@@ -405,7 +405,7 @@ var wordings = map[string]wording{
 			eventTaskDueTomorrow:  {bare: "Срок {what} — завтра"},
 		},
 		unknown: "{who} что-то сделал с {what} ({event})",
-		test:    "Тестовое сообщение от amenbo — этот проект отчитывается сюда.",
+		test:    "Тестовое сообщение от Amenbo — этот проект отчитывается сюда.",
 		statuses: map[string]string{
 			"todo":        "К выполнению",
 			"in_progress": "В работе",
@@ -431,7 +431,7 @@ var wordings = map[string]wording{
 			eventTaskDueTomorrow:  {bare: "{what} ถึงกำหนดพรุ่งนี้"},
 		},
 		unknown: "{who} ทำบางอย่างกับ {what} ({event})",
-		test:    "ข้อความทดสอบจาก amenbo — โปรเจกต์นี้จะรายงานมาที่นี่",
+		test:    "ข้อความทดสอบจาก Amenbo — โปรเจกต์นี้จะรายงานมาที่นี่",
 		statuses: map[string]string{
 			"todo":        "รอทำ",
 			"in_progress": "กำลังทำ",
@@ -457,7 +457,7 @@ var wordings = map[string]wording{
 			eventTaskDueTomorrow:  {bare: "{what} kaydının teslim tarihi yarın"},
 		},
 		unknown: "{who}, {what} üzerinde bir işlem yaptı ({event})",
-		test:    "amenbo'dan test mesajı — bu proje buraya bildiriyor.",
+		test:    "Amenbo'dan test mesajı — bu proje buraya bildiriyor.",
 		statuses: map[string]string{
 			"todo":        "Yapılacak",
 			"in_progress": "Sürüyor",
@@ -483,7 +483,7 @@ var wordings = map[string]wording{
 			eventTaskDueTomorrow:  {bare: "Термін {what} — завтра"},
 		},
 		unknown: "{who} щось зробив з {what} ({event})",
-		test:    "Тестове повідомлення від amenbo — цей проєкт звітує сюди.",
+		test:    "Тестове повідомлення від Amenbo — цей проєкт звітує сюди.",
 		statuses: map[string]string{
 			"todo":        "До виконання",
 			"in_progress": "У роботі",
@@ -509,7 +509,7 @@ var wordings = map[string]wording{
 			eventTaskDueTomorrow:  {bare: "{what} đến hạn vào ngày mai"},
 		},
 		unknown: "{who} đã tác động đến {what} ({event})",
-		test:    "Tin nhắn thử từ amenbo — dự án này sẽ báo về đây.",
+		test:    "Tin nhắn thử từ Amenbo — dự án này sẽ báo về đây.",
 		statuses: map[string]string{
 			"todo":        "Cần làm",
 			"in_progress": "Đang làm",
@@ -535,7 +535,7 @@ var wordings = map[string]wording{
 			eventTaskDueTomorrow:  {bare: "{what} 明天到期"},
 		},
 		unknown: "{who} 对 {what} 做了操作（{event}）",
-		test:    "来自 amenbo 的测试消息——这个项目会报告到这里。",
+		test:    "来自 Amenbo 的测试消息——这个项目会报告到这里。",
 		statuses: map[string]string{
 			"todo":        "待办",
 			"in_progress": "进行中",
@@ -561,7 +561,7 @@ var wordings = map[string]wording{
 			eventTaskDueTomorrow:  {bare: "{what} 明天到期"},
 		},
 		unknown: "{who} 對 {what} 做了操作（{event}）",
-		test:    "來自 amenbo 的測試訊息——這個專案會報告到這裡。",
+		test:    "來自 Amenbo 的測試訊息——這個專案會報告到這裡。",
 		statuses: map[string]string{
 			"todo":        "待辦",
 			"in_progress": "進行中",
@@ -589,7 +589,7 @@ func sentence(how preferences, in input, about subject) string {
 }
 
 // elaborated says which of a sentence's two forms this event calls for — whether the second thing
-// it would name arrived. For a comment that is the task it hangs on, which an amenbo old enough
+// it would name arrived. For a comment that is the task it hangs on, which an Amenbo old enough
 // carries none of; for every other event it is the state the record moved to.
 func elaborated(in input) bool {
 	switch in.Event {
@@ -629,7 +629,7 @@ func unknownSaying(language string) string {
 // value off the wire and leave as something a reader recognises; the third arrives that way and
 // stays, because it already is one.
 //
-//   - a **status** is a word amenbo owns, so it is said the way amenbo says it
+//   - a **status** is a word Amenbo owns, so it is said the way Amenbo says it
 //   - an **assignee** arrives as the facet, `ai` or `human`, which names one of the two the line
 //     is already about — so it is said by the name they go by, the same one the sentence's subject
 //     is said by
@@ -658,8 +658,8 @@ func testLine(language string) string {
 	return wordings[fallbackLanguage].test
 }
 
-// statusWord is amenbo's own word for a state. A status this build has no word for passes through
-// as it arrived: the value off the wire says more than nothing does, so a state amenbo adds later
+// statusWord is Amenbo's own word for a state. A status this build has no word for passes through
+// as it arrived: the value off the wire says more than nothing does, so a state Amenbo adds later
 // still reports.
 func statusWord(language, status string) string {
 	if word := wordings[language].statuses[status]; word != "" {
@@ -678,8 +678,8 @@ func statusWord(language, status string) string {
 // different things.
 //
 // A facet neither of the two, and a store that answered with no name at all, are said as they
-// arrived: what this reaches for is a name amenbo gave, never one made up here. The second is rare
-// on purpose — amenbo names both parties whether or not the user has chosen anything — so `human`
+// arrived: what this reaches for is a name Amenbo gave, never one made up here. The second is rare
+// on purpose — Amenbo names both parties whether or not the user has chosen anything — so `human`
 // in a line means the settings could not be read, which is the same failure that costs it its
 // language.
 func whoseName(how preferences, facet string) string {

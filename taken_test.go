@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-// oneProject is the project a test's runs reach unless it says otherwise. amenbo launches a plugin
+// oneProject is the project a test's runs reach unless it says otherwise. Amenbo launches a plugin
 // for the project whose event fired and names it by ref, so a test that says nothing about it is
 // still a test of one project.
 const oneProject = "AMB-P-1"
@@ -28,7 +28,7 @@ func stateDir(home, project string) string {
 	return filepath.Join(home, "plugins", pluginName, project)
 }
 
-// moment is one write, at one moment: the payload amenbo delivers, and delivers again if a runner
+// moment is one write, at one moment: the payload Amenbo delivers, and delivers again if a runner
 // died before it could take the row off the queue.
 func moment(event, at string) input {
 	in := aiWrite(event)
@@ -122,7 +122,7 @@ func TestTheRecordKeepsOnlyItsTail(t *testing.T) {
 	}
 }
 
-// A launch amenbo named no project for still has somewhere to remember: a corner of its own, kept
+// A launch Amenbo named no project for still has somewhere to remember: a corner of its own, kept
 // apart from every project rather than shared with them. A run by hand is what lands there.
 func TestARunWithNoProjectNamedKeepsItsOwnCorner(t *testing.T) {
 	home := t.TempDir()
@@ -207,7 +207,7 @@ func TestStateFromBeforeTheProjectSplitIsDropped(t *testing.T) {
 }
 
 // A run with nowhere to write reports anyway: a duplicate is a smaller fault than a silence, and a
-// hand run outside amenbo has no store named to it at all.
+// hand run outside Amenbo has no store named to it at all.
 func TestHookReportsWithNoStoreToRememberIn(t *testing.T) {
 	t.Setenv(storeEnv, "")
 	posted := slackStands(t)

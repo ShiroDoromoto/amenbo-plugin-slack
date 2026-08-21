@@ -44,7 +44,7 @@ var faces = map[string]func() error{
 const webhookSetting = "webhook_url"
 
 // verdictVersion is the version of the answer a check writes. It is a number of its own rather
-// than the payload's: what amenbo writes to a plugin and what a plugin writes back are two
+// than the payload's: what Amenbo writes to a plugin and what a plugin writes back are two
 // contracts, and they are free to move apart.
 const verdictVersion = 1
 
@@ -78,7 +78,7 @@ const checkedShape = "The URL has the shape of a Slack incoming webhook. Whether
 // be acted on.
 //
 // It ends zero whatever it found. A verdict of `ok: false` is this call having run and having
-// an answer; a non-zero exit is this call not having answered at all, which amenbo reads as
+// an answer; a non-zero exit is this call not having answered at all, which Amenbo reads as
 // *not checked* — the same as a crash. Saying "the URL is wrong" by failing would be saying
 // something else entirely.
 func configCheck() error {
@@ -99,7 +99,7 @@ func configCheck() error {
 //
 // What it does not do is quote the value back. The sentence is drawn on the settings form,
 // which is the one place the URL is already visible, but it is also the author's text passing
-// through amenbo — and a secret that travels in it is a secret in a place nobody thought to
+// through Amenbo — and a secret that travels in it is a secret in a place nobody thought to
 // guard. So every sentence here describes the shape and names none of what was pasted.
 func checkWebhook(raw string) string {
 	raw = strings.TrimSpace(raw)

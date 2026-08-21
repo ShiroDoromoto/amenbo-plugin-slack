@@ -49,7 +49,7 @@ var catalog = []string{
 // was away". The manifest declares the same six as the setting's default, and a test holds those
 // together too.
 //
-// The due dates are in it for the same reason amenbo keeps no quiet hours of its own: a
+// The due dates are in it for the same reason Amenbo keeps no quiet hours of its own: a
 // notification nobody opted into is one the user finds out about by missing a deadline first. They
 // are also the only events here that fire while nothing at all is being done, which is exactly when
 // nobody is looking at the app.
@@ -227,7 +227,7 @@ func firstFault(faults ...error) error {
 // it is meant rather than read as "unset" and quietly replaced by the default, which is the whole
 // reason a deliberate none is kept apart from an unanswered field.
 //
-// A `config` carrying no `events` key at all is the one case that is not an answer: an amenbo
+// A `config` carrying no `events` key at all is the one case that is not an answer: an Amenbo
 // from before the setting, or a manifest that does not declare it. There the built-in default
 // stands, so such a build reports what it has always reported.
 func selected(in input) map[string]bool {
@@ -291,7 +291,7 @@ func describe(in input) (subject, error) {
 // task on its own, not wrapped in an English phrase.
 //
 // The parent is a field that was added to the payload rather than one whose meaning changed, so
-// an amenbo old enough to send none is not a version to refuse over — it is a payload with less
+// an Amenbo old enough to send none is not a version to refuse over — it is a payload with less
 // in it, and the message falls back to naming the comment by its number, which is all there is.
 func commentOn(in input) (subject, error) {
 	if in.Parent == nil {

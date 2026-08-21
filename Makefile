@@ -23,7 +23,7 @@ test:
 	go vet ./...
 	go test ./...
 
-# Hand-install into an amenbo base dir — the author's own loop, before there is a release to
+# Hand-install into an Amenbo base dir — the author's own loop, before there is a release to
 # install from:
 #
 #   make install AMENBO_BASE="$$AMENBO_HOME"
@@ -33,7 +33,7 @@ test:
 # of that, so point it at a throwaway base, never at the one holding work you care about.
 install: build
 ifndef AMENBO_BASE
-	$(error set AMENBO_BASE to the amenbo base dir to install into)
+	$(error set AMENBO_BASE to the Amenbo base dir to install into)
 endif
 	mkdir -p "$(AMENBO_BASE)/plugins/$(BIN)"
 	cp $(BIN) "$(AMENBO_BASE)/plugins/$(BIN)/$(BIN)"

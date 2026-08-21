@@ -18,7 +18,7 @@ import (
 // sends everything held as one. Three things about that shape are worth stating outright:
 //
 //   - **The held messages are this plugin's to carry.** A launch ends after one event, and the row
-//     it was for has left the queue — nothing is waiting on amenbo's side, so what is held has to be
+//     it was for has left the queue — nothing is waiting on Amenbo's side, so what is held has to be
 //     on disk before anything else happens, or a run that never comes back takes it with it.
 //   - **The number counts this launch's project and no other.** A launch reaches one project, holds
 //     that project's lines and posts to that project's channel, so the count it flushes on is that
@@ -86,7 +86,7 @@ const reachQueueRemainingEnv = "AMENBO_PLUGIN_REACH_QUEUE_REMAINING"
 // reach zero however long the pass is. The count is this project's alone, which is what makes a zero
 // worth flushing on: the lines held here belong to this project too, and no other project's events
 // can keep them waiting. Nothing said, or something that will not parse as a count, is read as zero:
-// an amenbo too old to carry the variable, and a run by hand, both mean "there is nothing behind
+// an Amenbo too old to carry the variable, and a run by hand, both mean "there is nothing behind
 // this" — one message per event, which is a plainer channel and never a message lost.
 func remaining() int {
 	count, err := strconv.Atoi(strings.TrimSpace(os.Getenv(reachQueueRemainingEnv)))

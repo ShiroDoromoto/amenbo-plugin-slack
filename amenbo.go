@@ -11,13 +11,13 @@ import (
 
 // amenboCmd is the binary a plugin reads records back with. There is no second protocol and
 // no library to link — a plugin is any executable, so the one route that works in every
-// language is amenbo itself, on the PATH the user already has it on.
+// language is Amenbo itself, on the PATH the user already has it on.
 const amenboCmd = "amenbo"
 
-// runAmenbo runs one amenbo command and returns its stdout. Indirected so a test can stand in
+// runAmenbo runs one Amenbo command and returns its stdout. Indirected so a test can stand in
 // for the binary without one on the PATH.
 //
-// The environment is inherited untouched, and that is the whole of the read-back path: amenbo
+// The environment is inherited untouched, and that is the whole of the read-back path: Amenbo
 // hands a plugin the store to open and the window to read it through when it launches it,
 // because neither can be worked out from where a plugin stands — its working directory is
 // whatever its launcher happened to be in, and there is no binding of its own beneath it.
@@ -37,7 +37,7 @@ var runAmenbo = func(args ...string) ([]byte, error) {
 
 // actorFlag declares the facet the read is made under. Every operation that uses the facet
 // requires it and never defaults it, and a read is one of them — it is what an AI's reach is
-// otherwise drawn from. Here it is not: amenbo handed the window over in the environment, so
+// otherwise drawn from. Here it is not: Amenbo handed the window over in the environment, so
 // what the flag settles is only that the facet was declared, and `ai` is the narrower of the
 // two to declare.
 var actorFlag = []string{"--actor", "ai"}
@@ -53,7 +53,7 @@ func decisionShow(id int64) (ref, title string, err error) {
 	return show("decision", id)
 }
 
-// projectShow reads back the name of the project a run reaches. It is named by the ref amenbo hands
+// projectShow reads back the name of the project a run reaches. It is named by the ref Amenbo hands
 // over rather than by a number, and it is the one read here that is not about a record the payload
 // carried: what it answers is who the message is from.
 func projectShow(reach string) (name string, err error) {
@@ -77,7 +77,7 @@ func projectShow(reach string) (name string, err error) {
 //
 // A failure here is returned rather than raised: what it costs is the title, not the message
 // (see hook). The refusals worth expecting are a window that does not cover this record and a
-// store the caller's amenbo cannot open, and both say so on stderr, which is carried into the
+// store the caller's Amenbo cannot open, and both say so on stderr, which is carried into the
 // error so the execution log holds the reason and not just the fact.
 func show(kind string, id int64) (ref, title string, err error) {
 	args := append([]string{kind, "show", strconv.FormatInt(id, 10), "--json"}, actorFlag...)
@@ -97,18 +97,18 @@ func show(kind string, id int64) (ref, title string, err error) {
 
 // preferences is how a message should read: the language to say it in, and the names the two who
 // act in it go by. None of it is on the wire — a payload carries what happened, not how to word
-// it — and none of it is a setting of this plugin's own: the user has already told amenbo all
+// it — and none of it is a setting of this plugin's own: the user has already told Amenbo all
 // three, and asking again here would be the same question answered in two places, free to
 // disagree.
 type preferences struct {
-	// language is amenbo's language code, e.g. "ja", passed on as it was answered. Which codes
+	// language is Amenbo's language code, e.g. "ja", passed on as it was answered. Which codes
 	// there is a wording for is the wording's business; the read does not judge the answer,
-	// so a language amenbo adds later arrives here rather than being refused on the way in.
+	// so a language Amenbo adds later arrives here rather than being refused on the way in.
 	language string
 	// aiDisplayName is the name the AI goes by — the subject of every sentence this plugin writes.
 	aiDisplayName string
 	// humanDisplayName is the name the user goes by, which a line needs when the AI hands work
-	// over rather than does it. Unlike the AI's, it has no fallback here: amenbo already answers
+	// over rather than does it. Unlike the AI's, it has no fallback here: Amenbo already answers
 	// with a name of its own — in the language it is set to — while the user has not chosen one,
 	// so there is nothing left for this side to invent. Empty is what a store that could not be
 	// read at all leaves, and then the facet is said as it arrived.
@@ -116,14 +116,14 @@ type preferences struct {
 }
 
 // defaultPreferences is how a message reads while the store has not said otherwise: English, and
-// the AI named the way amenbo names it out of the box.
+// the AI named the way Amenbo names it out of the box.
 var defaultPreferences = preferences{language: fallbackLanguage, aiDisplayName: "AI"}
 
 // readPreferences reads them back — `amenbo config --json` — through the same route and the same
 // declared facet as a title. All of it comes off one answer, so a name costs no read of its own.
 //
 // Read it once, where the line is worded, and carry the answer from there: it is one answer per
-// message, not one per line, and the read costs a launch of amenbo either way.
+// message, not one per line, and the read costs a launch of Amenbo either way.
 //
 // A failure is a fault the run can log, and nothing more: the caller is handed the fallback
 // alongside it and words the message with that, the same way a title that could not be read costs

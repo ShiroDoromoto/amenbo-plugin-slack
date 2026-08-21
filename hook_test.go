@@ -23,7 +23,7 @@ func reporting(event string, chosen ...string) input {
 }
 
 // slackStands stands in for Slack: it collects every message posted to it and hands back the
-// webhook URL to post to, which the test puts where amenbo would have.
+// webhook URL to post to, which the test puts where Amenbo would have.
 func slackStands(t *testing.T) *[]string {
 	t.Helper()
 	var posted []string
@@ -45,7 +45,7 @@ func slackStands(t *testing.T) *[]string {
 // than something this plugin decided.
 const englishStore = `{"settings":{"language":"en","ai_display_name":"AI"}}`
 
-// readsBack stands in for amenbo, answering a `show --json` on any record with one ref and title,
+// readsBack stands in for Amenbo, answering a `show --json` on any record with one ref and title,
 // and the settings with the English store above.
 func readsBack(t *testing.T, ref, title string) *[]string {
 	t.Helper()
@@ -62,7 +62,7 @@ func readsBack(t *testing.T, ref, title string) *[]string {
 	return &asked
 }
 
-// namesTheProject stands in for an amenbo that answers `project show` with a name, and every other
+// namesTheProject stands in for an Amenbo that answers `project show` with a name, and every other
 // read the way readsBack does.
 func namesTheProject(t *testing.T, name string) *[]string {
 	t.Helper()
@@ -94,7 +94,7 @@ func records(asked *[]string) []string {
 	return kept
 }
 
-// refusesToRead stands in for an amenbo that would not answer.
+// refusesToRead stands in for an Amenbo that would not answer.
 func refusesToRead(t *testing.T, because string) {
 	t.Helper()
 	previous := runAmenbo
@@ -123,7 +123,7 @@ func TestHookSendsOneMessagePerEvent(t *testing.T) {
 	}
 }
 
-// readsBackInJapanese is an amenbo whose user reads in Japanese and named their AI.
+// readsBackInJapanese is an Amenbo whose user reads in Japanese and named their AI.
 func readsBackInJapanese(t *testing.T) *[]string {
 	t.Helper()
 	var asked []string
@@ -248,7 +248,7 @@ func TestHookNamesTheTaskAnAddedCommentHangsOn(t *testing.T) {
 	}
 }
 
-// An amenbo from before the parent was on the wire sends the event without one. The field was
+// An Amenbo from before the parent was on the wire sends the event without one. The field was
 // added rather than changed, so nothing is refused: the message names the comment by its own
 // number, which is all that arrived.
 func TestHookFallsBackToTheNumberWhenNoParentArrives(t *testing.T) {
@@ -319,7 +319,7 @@ func TestHookIsSilentWhenTheUserChoseNone(t *testing.T) {
 	}
 }
 
-// No setting at all is not an answer — an amenbo from before it, or a manifest without it — so the
+// No setting at all is not an answer — an Amenbo from before it, or a manifest without it — so the
 // four the manifest declares as its default are what such a build reports.
 func TestHookFallsBackToTheDefaultWhenNothingWasDeclared(t *testing.T) {
 	posted := slackStands(t)
@@ -431,7 +431,7 @@ func TestAMessageLeadsWithTheProjectItCameFrom(t *testing.T) {
 		t.Fatalf("the message should lead with the project, got %v", *posted)
 	}
 	if read := strings.Join(*asked, "\n"); !strings.Contains(read, "project show AMB-P-9 --json --actor ai") {
-		t.Errorf("the project should be read back by the ref amenbo handed over: %q", read)
+		t.Errorf("the project should be read back by the ref Amenbo handed over: %q", read)
 	}
 }
 

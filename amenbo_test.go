@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-// answersWith stands in for an amenbo that hands back one document to whatever is asked of it,
+// answersWith stands in for an Amenbo that hands back one document to whatever is asked of it,
 // and collects what was asked.
 func answersWith(t *testing.T, document string) *[]string {
 	t.Helper()
@@ -45,7 +45,7 @@ func TestPreferencesAreReadBackFromTheStore(t *testing.T) {
 
 // A code this build has no wording for is still the store's answer. Falling back is what the
 // wording does when it cannot find one, so the read passes the code on untouched — which is how
-// a language amenbo adds later reaches a build that predates it.
+// a language Amenbo adds later reaches a build that predates it.
 func TestAnUnknownLanguageIsPassedOnAsAnswered(t *testing.T) {
 	answersWith(t, `{"settings":{"language":"eo","ai_display_name":"AI"}}`)
 
@@ -110,7 +110,7 @@ func TestPreferencesFallBackOnAnAnswerThatWillNotParse(t *testing.T) {
 	}
 }
 
-// The user's name is the one field with no fallback: amenbo names its AI out of the box and its
+// The user's name is the one field with no fallback: Amenbo names its AI out of the box and its
 // user only when they say so, so an unanswered one stays empty and the facet is said as it
 // arrived, rather than a person being called something nobody chose.
 func TestTheUsersNameIsLeftEmptyRatherThanInvented(t *testing.T) {

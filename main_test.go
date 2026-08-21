@@ -18,7 +18,7 @@ func capture(t *testing.T) (stdout, stderr *bytes.Buffer) {
 	return stdout, stderr
 }
 
-// stdinWith writes doc to a temp file and opens it, standing in for the pipe amenbo feeds the
+// stdinWith writes doc to a temp file and opens it, standing in for the pipe Amenbo feeds the
 // plugin.
 func stdinWith(t *testing.T, doc string) *os.File {
 	t.Helper()
@@ -34,7 +34,7 @@ func stdinWith(t *testing.T, doc string) *os.File {
 	return f
 }
 
-// The document amenbo writes is read whole, including the fields this plugin acts on.
+// The document Amenbo writes is read whole, including the fields this plugin acts on.
 func TestReadInputTakesTheEventOffStdin(t *testing.T) {
 	in := readInput(stdinWith(t, `{"v":1,"event":"task.done","id":42,"actor":"ai","at":"2026-07-22T09:00:00Z"}`))
 

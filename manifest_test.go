@@ -98,7 +98,7 @@ func setting(t *testing.T, key string) field {
 
 // The subscription and the code have to name the same events. An event only the manifest names is a
 // launch this plugin has no sentence for; an event only the code names is a sentence never reached,
-// since amenbo starts a plugin for what it subscribed to and nothing else.
+// since Amenbo starts a plugin for what it subscribed to and nothing else.
 func TestTheManifestSubscribesToTheWholeCatalog(t *testing.T) {
 	events := read(t).Events
 
@@ -146,7 +146,7 @@ func TestTheDeclaredDefaultIsTheOneTheCodeFallsBackTo(t *testing.T) {
 // plugin reads it from — and it is required, since a plugin with nowhere to post does nothing.
 func TestTheManifestDeclaresTheWebhookAsARequiredSecret(t *testing.T) {
 	if name := read(t).Name; name != "slack" {
-		t.Errorf("the plugin's name decides what amenbo runs: %q", name)
+		t.Errorf("the plugin's name decides what Amenbo runs: %q", name)
 	}
 	webhook := setting(t, webhookSetting)
 
@@ -160,7 +160,7 @@ func TestTheManifestDeclaresTheWebhookAsARequiredSecret(t *testing.T) {
 	}
 }
 
-// actionLabelLimit is what a button's label may weigh. It is amenbo's rule, held here because a
+// actionLabelLimit is what a button's label may weigh. It is Amenbo's rule, held here because a
 // manifest that breaks it is refused at the catalog door rather than on the screen.
 const actionLabelLimit = 40
 
@@ -206,7 +206,7 @@ func TestEveryPlatformTheBuildBakesIsPublished(t *testing.T) {
 	}
 }
 
-// `os` is what amenbo weighs against the machine before it offers the plugin at all, so it follows
+// `os` is what Amenbo weighs against the machine before it offers the plugin at all, so it follows
 // from the same list: the operating systems the baked platforms name, and no others. Which order
 // they are written in says nothing — two platform keys share each name — so it is not read into.
 func TestTheDeclaredOSesAreTheOnesTheBuildBakesFor(t *testing.T) {

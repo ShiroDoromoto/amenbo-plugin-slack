@@ -1,4 +1,4 @@
-# slack — amenbo's official Slack notification plugin
+# slack — Amenbo's official Slack notification plugin
 
 Report to a Slack channel what your AI did in a project while you were away from it, and which
 tasks have run out of days.
@@ -21,7 +21,7 @@ Three things decide what arrives.
   webhooks and they report to two channels; there is no channel name anywhere in the plugin. And
   every message says which project it came from, so pointing two of them at one channel still
   reads.
-- **Which events, you choose.** `events` is a list you tick, from everything amenbo fires. Its
+- **Which events, you choose.** `events` is a list you tick, from everything Amenbo fires. Its
   default is the four above plus the two due dates, and both the choice and the channel are answered
   per project.
 
@@ -33,7 +33,7 @@ printf %s 'https://hooks.slack.com/services/…' | amenbo plugin config set slac
 amenbo plugin enable slack            # installing never runs anything; this is the consent
 ```
 
-Run these from the folder amenbo is bound to: the setting and the switch are that project's. The
+Run these from the folder Amenbo is bound to: the setting and the switch are that project's. The
 webhook goes in through `-`, which reads it from stdin — written as an argument it would sit in the
 shell's history and in anything reading the process list, and a webhook is a credential.
 
@@ -42,7 +42,7 @@ so there, rather than at the first event that fails to post ([below](#whether-th
 
 ### Getting the webhook URL
 
-The webhook is Slack's, not amenbo's: it is made in the workspace, points at one channel, and is the
+The webhook is Slack's, not Amenbo's: it is made in the workspace, points at one channel, and is the
 whole of what this plugin is ever told about where to post. From
 [Your Apps](https://api.slack.com/apps), create an app in the workspace that should hear about the
 project, turn on **Incoming Webhooks**, add one to the channel it should post to, and copy the URL it
@@ -51,7 +51,7 @@ the wrong room with nothing else set wrong. Slack's own walkthrough is [Sending 
 incoming webhooks](https://api.slack.com/messaging/webhooks).
 
 Anyone holding the URL can post to that channel, which is why it is declared secret here: it leaves
-amenbo only into this plugin's environment, and never into an export, a log or a read-back.
+Amenbo only into this plugin's environment, and never into an export, a log or a read-back.
 
 ### One channel per project
 
@@ -85,7 +85,7 @@ Every message leads with the project's name, in bold:
 AI created AMB-T-42 — Ship the thing
 ```
 
-The name is the one amenbo holds for the project the plugin was launched for — not a folder name and
+The name is the one Amenbo holds for the project the plugin was launched for — not a folder name and
 not a guess — and it is read at the moment of sending: once for the message, rather than once for
 every line, since every line in a batch comes from the same project. It is said at the top for the
 same reason: repeating it down the left of a batch would say nothing the first line has not.
@@ -95,7 +95,7 @@ out, and the run ends non-zero so the reason is in `amenbo plugin log slack`.
 
 ### What can be reported
 
-Every event amenbo fires is on offer, and each one has its own sentence — one line. The six in
+Every event Amenbo fires is on offer, and each one has its own sentence — one line. The six in
 **bold** are what a channel gets until you say otherwise.
 
 | Event | The message |
@@ -117,11 +117,11 @@ Every event amenbo fires is on offer, and each one has its own sentence — one 
 `<task>` and `<decision>` are the record's ref and its title, read back from the store. One of them
 cannot be: a **deleted** task is gone, so its title comes off the vanished record the event carries
 in its place. A comment is read back by the task it hangs on rather than by itself — its own number
-belongs to a timeline nobody in the channel is looking at — and an amenbo old enough not to send
+belongs to a timeline nobody in the channel is looking at — and an Amenbo old enough not to send
 that task falls back to naming the comment by its number.
 
 `<AI>` and `<who>` are the names your AI and you go by, and the sentences above are the English
-ones — all of it is read back from amenbo too. See below.
+ones — all of it is read back from Amenbo too. See below.
 
 ### The two that nobody did
 
@@ -130,7 +130,7 @@ date is not something anyone wrote: the day came. So the rule above — only the
 nothing to catch there, and it is the same rule that says they belong in the channel, since a day
 arriving is the event nobody is at the desk for.
 
-They are amenbo's own, not this plugin's. Something in the machine's schedule wakes amenbo up, it
+They are Amenbo's own, not this plugin's. Something in the machine's schedule wakes Amenbo up, it
 reads the due dates against that machine's calendar day, and it fires one event per task, once a day
 — `task.due` for what is due today or already past, `task.due_tomorrow` for what has one day left.
 The two are the red and the yellow of the app's own chips, so a channel and a screen never disagree
@@ -152,11 +152,11 @@ AMB-T-12 is due tomorrow — Book the room
 
 What was done comes first and reads in the order it happened; then what is already standing, then
 what arrives tomorrow. Being quiet at night is the channel's own business — Slack has a Do Not
-Disturb, and amenbo does not override it by holding a notification until morning.
+Disturb, and Amenbo does not override it by holding a notification until morning.
 
 ### The language a message is in
 
-A message is written in the language amenbo is set to, and the two who appear in it — your AI, and
+A message is written in the language Amenbo is set to, and the two who appear in it — your AI, and
 you when it hands something over — are called what you named them. None of it is a setting here:
 you have answered all three already, in **Settings** in the app, and this plugin reads them back
 rather than asking a second time.
@@ -172,11 +172,11 @@ amenbo config set human_name 山田
 そらまめ が AMB-T-42 を完了しました — Ship the thing
 ```
 
-All nineteen languages amenbo offers are here: `de` `en` `es` `fr` `hi` `id` `it` `ja` `ko` `nl`
+All nineteen languages Amenbo offers are here: `de` `en` `es` `fr` `hi` `id` `it` `ja` `ko` `nl`
 `pl` `pt-BR` `ru` `th` `tr` `uk` `vi` `zh-Hans` `zh-Hant`.
 
 **What is translated is the sentence, and one word inside it.** The word is a task's status, and it
-is worded the way the app words it — a channel calling a state something amenbo does not would be
+is worded the way the app words it — a channel calling a state something Amenbo does not would be
 naming something you cannot go and find. Everything else in a line is yours and arrives as you
 wrote it: the title, the ref, the name of the project a task moved into. So are the diagnostics in
 `amenbo plugin log slack` and this README — those are read by whoever is installing the plugin, not
@@ -184,11 +184,11 @@ by the channel.
 
 Who a task was **assigned** to arrives as `ai` or `human` — a contract value, not a name — so it is
 said by the name that party goes by, the same one the sentence's subject is said by. Setting a name
-is optional: until you set one, amenbo answers with a name of its own, in the language it is set
+is optional: until you set one, Amenbo answers with a name of its own, in the language it is set
 to. A name is reached for and never invented here, so `ai` and `human` reach a line only when the
 settings could not be read at all — the same read whose failure costs the line its language.
 
-**Nothing here can cost you a notification.** A language this build has never heard of — one amenbo
+**Nothing here can cost you a notification.** A language this build has never heard of — one Amenbo
 adds after this release — is reported in English, as is a status with no word yet; and settings that
 could not be read at all cost a line its language and nothing else, the message still going out with
 the run ending non-zero so the reason is in the log.
@@ -196,7 +196,7 @@ the run ending non-zero so the reason is in the log.
 ### A burst arrives as one message
 
 Deleting a project, clearing a pile of tasks, or a day's due dates coming round, fires tens of events
-in a moment — and to you that was one act, or no act at all. So a line waits while amenbo says
+in a moment — and to you that was one act, or no act at all. So a line waits while Amenbo says
 anything is still queued for this project, and the run that sees nothing behind it sends everything
 waiting as one message:
 
@@ -209,7 +209,7 @@ AI finished AMB-T-42 — Ship the thing
 
 A quiet channel is unaffected: one event with nothing behind it is one message, as before. While the
 sends are getting through, what is waiting is waiting on the events queued in front of it and no
-longer — amenbo delivers as fast as it can.
+longer — Amenbo delivers as fast as it can.
 
 While they are not getting through, the lines stay owed and pile up, so the hold stops at **200
 messages** and the oldest fall off. `amenbo plugin log slack` says how many were dropped, and when.
@@ -217,7 +217,7 @@ Losing the oldest lines is the cheaper loss: a webhook that has been revoked ref
 a batch left to grow becomes a message longer than Slack will take — at which point fixing the
 webhook would no longer fix the channel.
 
-Two projects on one machine keep out of each other's way: the count amenbo hands over is this
+Two projects on one machine keep out of each other's way: the count Amenbo hands over is this
 project's queue, and the lines held are this project's too, so each channel flushes on its own quiet
 moment and neither holds the other's lines back.
 
@@ -245,7 +245,7 @@ full-shaped webhook is what a secret scanner blocks a push over, and here it wou
 string nobody can post to.
 
 Being declared secret is what keeps the webhook out of an `export` and out of the `config` object on
-stdin: amenbo hands it over in the environment instead, and this plugin reads it from there. It never
+stdin: Amenbo hands it over in the environment instead, and this plugin reads it from there. It never
 reads a secret file of its own. The choice is not a secret, so it arrives on stdin with the event.
 
 ### Whether the webhook is one
@@ -273,7 +273,7 @@ button.
 The verdict's sentences go on the settings form and nowhere else — they quote none of what you
 pasted, the CLI's refusal names the box and not the text, and `amenbo agent --json` carries neither.
 The test message is a line in a channel like any other, so it is written in the language you read
-amenbo in and headed by the project you pressed in.
+Amenbo in and headed by the project you pressed in.
 
 ## Why nothing arrived
 
@@ -289,13 +289,13 @@ never in them — a log a channel can be posted to from is a leak.
 
 ## The contract, as this plugin reads it
 
-A plugin is just an executable. amenbo starts it, writes one JSON document to its stdin, and
-reads back what it wrote and how it exited. Its face is the **observation hook**: amenbo fires
+A plugin is just an executable. Amenbo starts it, writes one JSON document to its stdin, and
+reads back what it wrote and how it exited. Its face is the **observation hook**: Amenbo fires
 it with no arguments when an event fires, and nobody is waiting for an answer.
 
 Two calls stand beside it, `config check` and `config test`, and they are the settings form's
 rather than a terminal's — [above](#whether-the-webhook-is-one). The manifest declares them under
-`settings`; amenbo raises them down the road every other run takes, so they arrive with the same
+`settings`; Amenbo raises them down the road every other run takes, so they arrive with the same
 injected settings and land in the same execution log. Any other argument is refused.
 
 ```json
@@ -315,7 +315,7 @@ amenbo project show AMB-P-1 --json --actor ai    # the heading, on the run that 
 amenbo config --json --actor ai                  # the language and the AI's name, per line worded
 ```
 
-amenbo names the store to open and the window to read it through in the environment, because
+Amenbo names the store to open and the window to read it through in the environment, because
 neither can be worked out from where a plugin stands. This plugin passes both on untouched and
 adds nothing of its own. The facet is declared because every operation that uses one requires
 it; what it would otherwise settle — how far the reader reaches — the window has already
@@ -330,7 +330,7 @@ and the run still ends non-zero so the fault lands in the log instead of quietly
 message from then on.
 
 **An event delivered twice is reported once.** A runner that died after this plugin took an event in,
-but before amenbo could take that row off the queue, delivers it again — and nobody reading the
+but before Amenbo could take that row off the queue, delivers it again — and nobody reading the
 channel could tell that second line from a real one. So what has been taken in is written down, keyed
 by what happened, to which record, at which moment, and a key already there stops the run before
 anything is read, held or sent. The record is a bounded tail in the plugin's own installed directory,
@@ -346,12 +346,12 @@ project's. Zero is not a promise that nothing more is coming: an event written a
 delivered like any other, so a batch may be followed by a second one. That is one message becoming
 two, never a message lost. What is waiting is written down before anything is sent, because a launch
 that does not come back would otherwise take it along — and it is written down under the project it
-belongs to, the window amenbo hands over for reading records back being what tells one project's
+belongs to, the window Amenbo hands over for reading records back being what tells one project's
 state from another's. A build that kept that state for the whole store left behind files no project
 can claim, so the first run under the split drops them rather than delivering them to a guess. See
 [`pending.go`](pending.go).
 
-**Nothing is retried.** amenbo drops a failed event and never retries it; two sides retrying one send
+**Nothing is retried.** Amenbo drops a failed event and never retries it; two sides retrying one send
 is how one message becomes three, with nobody able to say why. A flush that Slack refused leaves its
 lines still owed instead, so the next one carries them — they are late, not lost. What is owed is
 bounded for the same reason it is kept: a refusal that never stops being one would otherwise pile
@@ -368,7 +368,7 @@ make test      # gofmt, go vet, go test
 ```
 
 To try a build before there is a release to install from, hand-install it into a throwaway
-amenbo base:
+Amenbo base:
 
 ```sh
 make install AMENBO_BASE="$AMENBO_HOME"

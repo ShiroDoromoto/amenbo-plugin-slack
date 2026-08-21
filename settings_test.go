@@ -62,8 +62,8 @@ func TestTheCheckNamesWhatIsNotAWebhook(t *testing.T) {
 	}
 }
 
-// A verdict is drawn on a screen and travels through amenbo to get there, so what it says about a
-// secret is never the secret. Neither is the whole answer allowed to grow past what amenbo reads:
+// A verdict is drawn on a screen and travels through Amenbo to get there, so what it says about a
+// secret is never the secret. Neither is the whole answer allowed to grow past what Amenbo reads:
 // a sentence over 200 bytes, or carrying a control character, is thrown away entire — and an
 // answer thrown away is a plugin that stays disabled.
 func TestAVerdictQuotesNothingItWasGiven(t *testing.T) {
@@ -78,7 +78,7 @@ func TestAVerdictQuotesNothingItWasGiven(t *testing.T) {
 	}
 	for _, said := range append(sentences(answer), verdictOf(t, shapedLikeAWebhook).Message) {
 		if len(said) > 200 {
-			t.Errorf("a sentence amenbo will not read is one nobody sees: %d bytes, %q", len(said), said)
+			t.Errorf("a sentence Amenbo will not read is one nobody sees: %d bytes, %q", len(said), said)
 		}
 		if strings.ContainsFunc(said, func(r rune) bool { return r < 0x20 || r == 0x7f }) {
 			t.Errorf("a sentence carrying a control character is thrown away whole: %q", said)
@@ -86,7 +86,7 @@ func TestAVerdictQuotesNothingItWasGiven(t *testing.T) {
 	}
 }
 
-// sentences is everything in a verdict that amenbo draws.
+// sentences is everything in a verdict that Amenbo draws.
 func sentences(answer verdict) []string {
 	said := []string{answer.Message}
 	for _, one := range answer.Fields {
@@ -96,7 +96,7 @@ func sentences(answer verdict) []string {
 }
 
 // A check is not how "the URL is wrong" is said. It ends zero whatever it found, because a
-// non-zero exit means it did not answer at all — which amenbo reads as never having checked, and
+// non-zero exit means it did not answer at all — which Amenbo reads as never having checked, and
 // which leaves the plugin disabled for a reason that has nothing to do with the value.
 func TestACheckWithABadValueStillEndsWell(t *testing.T) {
 	t.Setenv(webhookEnv, "not a webhook")

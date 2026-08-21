@@ -74,7 +74,7 @@ func channel(t *testing.T) (*[]string, string) {
 	return &posted, server.URL
 }
 
-// launch is one event delivered for one project: the reach and the webhook amenbo hands over are that
+// launch is one event delivered for one project: the reach and the webhook Amenbo hands over are that
 // project's, and both change from launch to launch on a store holding two.
 func launch(t *testing.T, project, webhook string, queued int, in input) {
 	t.Helper()
@@ -116,7 +116,7 @@ func TestALineHeldForOneProjectIsNotFlushedByAnother(t *testing.T) {
 }
 
 // What is held is written down before anything else happens, because a launch ends after one event and
-// the row it was for has already left the queue — nothing on amenbo's side is waiting to hand it over
+// the row it was for has already left the queue — nothing on Amenbo's side is waiting to hand it over
 // again.
 func TestWhatIsHeldSurvivesTheRunThatHeldIt(t *testing.T) {
 	home := remembers(t)
@@ -168,7 +168,7 @@ func TestWhatWentOutIsNoLongerOwed(t *testing.T) {
 	}
 }
 
-// A flush that Slack refused leaves everything still owed, so the next one carries it. amenbo does not
+// A flush that Slack refused leaves everything still owed, so the next one carries it. Amenbo does not
 // retry the event, and this is what stands in for that: the lines are not lost, they are late.
 func TestAFlushThatFailedLeavesTheLinesOwed(t *testing.T) {
 	remembers(t)
@@ -260,7 +260,7 @@ func TestAReplayStillFlushesWhatIsWaiting(t *testing.T) {
 	}
 }
 
-// An amenbo that says nothing about its queue, and a run by hand, both mean "nothing is behind this" —
+// An Amenbo that says nothing about its queue, and a run by hand, both mean "nothing is behind this" —
 // one message per event, the way it worked before the runner counted.
 func TestHookSendsAtOnceWhenNothingSaysWhatIsBehind(t *testing.T) {
 	remembers(t)
@@ -298,7 +298,7 @@ func TestHookHoldsNothingBackWithNoStoreToHoldItIn(t *testing.T) {
 	}
 }
 
-// numbered stands in for an amenbo answering every read with a title of its own, so the lines held
+// numbered stands in for an Amenbo answering every read with a title of its own, so the lines held
 // can be told apart by the order they were taken in.
 func numbered(t *testing.T) {
 	t.Helper()
@@ -442,7 +442,7 @@ func TestAHeldMessageSurvivesANewlineInATitle(t *testing.T) {
 	}
 }
 
-// eachTask stands in for an amenbo answering every read with the record that was asked for, so the
+// eachTask stands in for an Amenbo answering every read with the record that was asked for, so the
 // lines in a batch can be told apart by the task they name.
 func eachTask(t *testing.T) {
 	t.Helper()

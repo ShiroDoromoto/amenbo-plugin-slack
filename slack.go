@@ -25,7 +25,7 @@ var sender = &http.Client{Timeout: sendTimeout}
 
 // post sends one message to a Slack incoming webhook.
 //
-// It is sent once. amenbo does not retry a failed event, and neither does this: two sides
+// It is sent once. Amenbo does not retry a failed event, and neither does this: two sides
 // retrying the same send is how one message becomes three, with nobody able to say why. What
 // a failure gets is a line in the execution log saying what Slack refused it with.
 func post(webhook, text string) error {

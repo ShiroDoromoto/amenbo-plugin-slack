@@ -9,7 +9,7 @@ import (
 )
 
 // The same event can arrive twice. A runner that dies after a plugin finished an event but before
-// amenbo took that row off the queue replays it, and amenbo cannot see what happened on the other
+// Amenbo took that row off the queue replays it, and Amenbo cannot see what happened on the other
 // side, so it cannot prevent this — making the second run a no-op is the plugin's job.
 //
 // Nobody on the receiving end can tell that second message from a real one: a channel showing
@@ -33,11 +33,11 @@ const takenFile = "taken-events.log"
 // from growing without end.
 const remembered = 200
 
-// reachEnv carries the project this run reaches — the same window amenbo hands over for reading
+// reachEnv carries the project this run reaches — the same window Amenbo hands over for reading
 // records back, written as that project's ref, e.g. "AMB-P-1".
 const reachEnv = "AMENBO_PLUGIN_REACH"
 
-// noReach is where state goes when no project was named: a run by hand, or an amenbo from before
+// noReach is where state goes when no project was named: a run by hand, or an Amenbo from before
 // the variable. It is one bucket among the others rather than a shared one, and no project can land
 // in it by accident — a reach is a ref, and a ref never spells this.
 const noReach = "no-project"
@@ -59,7 +59,7 @@ func statePath(name string) string {
 	return filepath.Join(home, "plugins", pluginName, reachDir(), name)
 }
 
-// reachDir is the directory a project's state sits in: its ref, made safe to put in a path. amenbo
+// reachDir is the directory a project's state sits in: its ref, made safe to put in a path. Amenbo
 // writes a ref and nothing else, so today the mapping changes nothing; it is here because the name
 // comes in as an environment variable's value, and a value carrying a separator would write the
 // state somewhere other than under the plugin.
@@ -134,7 +134,7 @@ func readLines(path string) []string {
 }
 
 // takenKey identifies one event: what happened, to which record, at which moment. The moment is what
-// separates a replay from a repeat — amenbo hands over the same `at` when it delivers an event
+// separates a replay from a repeat — Amenbo hands over the same `at` when it delivers an event
 // again, and a different one when the user acts again.
 func takenKey(in input) string {
 	return in.Event + " " + strconv.FormatInt(in.ID, 10) + " " + in.At

@@ -16,7 +16,7 @@ func lineFor(how preferences, event, newState string, about subject) string {
 	return sentence(how, input{Event: event, New: newState}, about)
 }
 
-// Every event in the catalog has its own sentence, and the ones amenbo hands a new state spend it.
+// Every event in the catalog has its own sentence, and the ones Amenbo hands a new state spend it.
 // The title trails all of them.
 func TestSentenceSaysWhatHappened(t *testing.T) {
 	about := subject{name: "AMB-T-42", title: "Ship the thing"}
@@ -120,7 +120,7 @@ func TestTheAIIsTheNameTheUserGaveIt(t *testing.T) {
 }
 
 // A language this build has no wording for is not a message lost: it is said in English, which is
-// the row that is always complete. So a language amenbo adds after this build still reports.
+// the row that is always complete. So a language Amenbo adds after this build still reports.
 func TestALanguageWithNoWordingFallsBackToEnglish(t *testing.T) {
 	about := subject{name: "AMB-T-42"}
 	unknown := preferences{language: "eo", aiDisplayName: "AI"}
@@ -134,7 +134,7 @@ func TestALanguageWithNoWordingFallsBackToEnglish(t *testing.T) {
 }
 
 // What a sentence names besides the record arrives as a value off the wire, and each of the three
-// leaves differently: a status becomes amenbo's own word, a facet becomes the name that facet goes
+// leaves differently: a status becomes Amenbo's own word, a facet becomes the name that facet goes
 // by, and a project's slug stays as it is — it is the store's own value and what the user would go
 // and search for.
 func TestWhatASentenceNamesBesidesTheRecord(t *testing.T) {
@@ -175,7 +175,7 @@ func TestAFacetWithNoNameIsSaidAsItArrived(t *testing.T) {
 	nameless := preferences{language: "en", aiDisplayName: "AI"}
 
 	if got, want := lineFor(nameless, eventTaskAssigned, actorHuman, about), "AI assigned AMB-T-42 to human"; got != want {
-		t.Errorf("a user amenbo has no name for: got %q, want %q", got, want)
+		t.Errorf("a user Amenbo has no name for: got %q, want %q", got, want)
 	}
 	if got, want := lineFor(english, eventTaskAssigned, "committee", about), "AI assigned AMB-T-42 to committee"; got != want {
 		t.Errorf("a facet this build does not know: got %q, want %q", got, want)
@@ -183,7 +183,7 @@ func TestAFacetWithNoNameIsSaidAsItArrived(t *testing.T) {
 }
 
 // A status this build has no word for is still worth saying: the value off the wire says more than
-// nothing, so a state amenbo adds later reports rather than disappearing.
+// nothing, so a state Amenbo adds later reports rather than disappearing.
 func TestAStatusWithNoWordIsSaidAsItArrived(t *testing.T) {
 	about := subject{name: "AMB-T-42"}
 
@@ -206,7 +206,7 @@ func TestAnEventWithNoWordingIsStillNamed(t *testing.T) {
 	}
 }
 
-// Every language amenbo offers has a row here, spelled the way amenbo spells the code — a `pt-br`
+// Every language Amenbo offers has a row here, spelled the way Amenbo spells the code — a `pt-br`
 // where the store says `pt-BR` is a row nothing ever reads, and it would go out in English with
 // nobody able to say why.
 func TestEveryLanguageAmenboOffersHasARow(t *testing.T) {
@@ -225,7 +225,7 @@ func TestEveryLanguageAmenboOffersHasARow(t *testing.T) {
 }
 
 // A third language, end to end, to show the row is wired and not merely present: the sentence, the
-// name the user gave their AI, and amenbo's own word for the status, with the title untouched.
+// name the user gave their AI, and Amenbo's own word for the status, with the title untouched.
 func TestAThirdLanguageIsSaidFromItsOwnRow(t *testing.T) {
 	about := subject{name: "AMB-T-42", title: "Ship the thing"}
 	german := preferences{language: "de", aiDisplayName: "Bob"}
@@ -286,7 +286,7 @@ func TestEveryLanguageSaysEverything(t *testing.T) {
 	}
 }
 
-// carriesAState is the events amenbo hands a state to spend — the three whose fuller form has a
+// carriesAState is the events Amenbo hands a state to spend — the three whose fuller form has a
 // `{state}` in it. The comment pair have a fuller form too, but what theirs spends is the record.
 var carriesAState = map[string]bool{
 	eventStatusChanged: true, eventTaskAssigned: true, eventTaskMoved: true,
