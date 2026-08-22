@@ -17,6 +17,7 @@ type manifest struct {
 	Name     string           `json:"name"`
 	Repo     string           `json:"repo"`
 	OS       []string         `json:"os"`
+	Official bool             `json:"official"`
 	Events   []string         `json:"events"`
 	Config   []field          `json:"config"`
 	Settings settings         `json:"settings"`
@@ -39,6 +40,9 @@ type asset struct {
 	Checksum string `json:"checksum"`
 }
 
+// field is an entry in `config`, which holds two unlike things: the settings themselves, and the
+// parts Amenbo draws between them. A part has no `key`, so the one it is — here, only `link` — is
+// what says which of the two this entry is.
 type field struct {
 	Key      string   `json:"key"`
 	Secret   bool     `json:"secret"`
@@ -46,6 +50,12 @@ type field struct {
 	Type     string   `json:"type"`
 	Default  string   `json:"default"`
 	Options  []option `json:"options"`
+	Link     *link    `json:"link"`
+}
+
+type link struct {
+	URL   string `json:"url"`
+	Label string `json:"label"`
 }
 
 type option struct {
@@ -185,6 +195,30 @@ func TestTheCallsTheFormRaisesAreTheOnesTheCodeAnswers(t *testing.T) {
 	}
 	if len(declared) != len(faces) {
 		t.Errorf("the manifest raises %v, the code answers %d call(s)", declared, len(faces))
+	}
+}
+
+// A part carrying a destination is drawn for an official plugin and for nobody else, so a manifest
+// declaring a link without declaring itself official ships a button that is simply absent from the
+// form — no error anywhere, just the field back on its own. The catalog refuses that pairing at its
+// door; this holds the same reading against the copy `make install` lays down, where nothing does.
+func TestADestinationIsDeclaredOnlyWhereItWouldBeDrawn(t *testing.T) {
+	m := read(t)
+
+	for i, declared := range m.Config {
+		if declared.Link == nil {
+			continue
+		}
+		if !m.Official {
+			t.Errorf("config[%d] declares a link, and the manifest does not declare itself official", i)
+		}
+		// A scheme that starts something on this machine is not the button a reader was offered.
+		if !strings.HasPrefix(declared.Link.URL, "https://") && !strings.HasPrefix(declared.Link.URL, "http://") {
+			t.Errorf("config[%d]: a link opens an http(s) page, and %q is not one", i, declared.Link.URL)
+		}
+		if declared.Link.Label == "" {
+			t.Errorf("config[%d]: the button has nothing on it to read", i)
+		}
 	}
 }
 

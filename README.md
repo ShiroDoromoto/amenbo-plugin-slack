@@ -50,6 +50,9 @@ hands back — that URL *is* the channel, so a webhook for the wrong channel is 
 the wrong room with nothing else set wrong. Slack's own walkthrough is [Sending messages using
 incoming webhooks](https://api.slack.com/messaging/webhooks).
 
+Whoever is at the settings form rather than at this file does not have to carry that address there by
+hand: the manifest declares a button above the field, and pressing it opens Your Apps in the browser.
+
 Anyone holding the URL can post to that channel, which is why it is declared secret here: it leaves
 Amenbo only into this plugin's environment, and never into an export, a log or a read-back.
 
@@ -236,9 +239,15 @@ amenbo plugin config set slack events task.done,task.rejected     # only the ter
 which is a different thing from never having answered. Clearing the setting (an empty value) puts
 the default back.
 
-The short of both is in the manifest too — a `help` line under each field, and the webhook's shape as
-a `placeholder` in the empty box — so the setting form answers there for whoever never opens this
-file. Reword one and reword the other, and the catalog entry's translations with them.
+The short of both is in the manifest too — a `help` line under each field, the webhook's shape as a
+`placeholder` in the empty box, and a `link` to `api.slack.com/apps` standing above the webhook — so
+the setting form answers there for whoever never opens this file. Reword one and reword the other,
+and the catalog entry's translations with them.
+
+The button's label is not one of them. A part written between the fields is keyed to nothing, so no
+translation can reach it, and it reads in whatever it was written in wherever the listing is read —
+which is why the label is the address itself and the words that need a language stayed in the
+field's `help`. Declaring a part at all is what puts `min_amenbo` at the version that draws one.
 
 The placeholder elides the parts that vary (`T…/B…/…`) instead of spelling a plausible URL out. A
 full-shaped webhook is what a secret scanner blocks a push over, and here it would be blocking a
